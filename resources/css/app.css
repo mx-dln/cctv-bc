@@ -1,0 +1,130 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@source '../views';
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+    --radius-lg: var(--radius);
+    --radius-md: calc(var(--radius) - 2px);
+    --radius-sm: calc(var(--radius) - 4px);
+
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+    --color-popover: var(--popover);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-destructive: var(--destructive);
+    --color-destructive-foreground: var(--destructive-foreground);
+    --color-border: var(--border);
+    --color-input: var(--input);
+    --color-ring: var(--ring);
+    --color-chart-1: var(--chart-1);
+    --color-chart-2: var(--chart-2);
+    --color-chart-3: var(--chart-3);
+    --color-chart-4: var(--chart-4);
+    --color-chart-5: var(--chart-5);
+    --color-sidebar: var(--sidebar);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-ring: var(--sidebar-ring);
+
+    --color-ficobank-gold: #AD9334;
+    --color-ficobank-gold-light: #C2A74A;
+    --color-ficobank-purple: #352A6F;
+    --color-ficobank-purple-light: #43308C;
+    --color-ficobank-bg: #0F1020;
+    --color-ficobank-surface: #17182B;
+    --color-ficobank-border: #2A2D4A;
+}
+
+:root {
+    --background: #0F1020;
+    --foreground: #FFFFFF;
+    --card: #17182B;
+    --card-foreground: #FFFFFF;
+    --popover: #17182B;
+    --popover-foreground: #FFFFFF;
+    --primary: #AD9334;
+    --primary-foreground: #FFFFFF;
+    --secondary: #352A6F;
+    --secondary-foreground: #FFFFFF;
+    --muted: #17182B;
+    --muted-foreground: #8A8CA6;
+    --accent: #C2A74A;
+    --accent-foreground: #0F1020;
+    --destructive: #991B1B;
+    --destructive-foreground: #FCA5A5;
+    --border: #2A2D4A;
+    --input: #2A2D4A;
+    --ring: #AD9334;
+    --chart-1: #AD9334;
+    --chart-2: #C2A74A;
+    --chart-3: #352A6F;
+    --chart-4: #43308C;
+    --chart-5: #FFFFFF;
+    --radius: 0.625rem;
+    --sidebar: #352A6F;
+    --sidebar-foreground: #FFFFFF;
+    --sidebar-primary: #AD9334;
+    --sidebar-primary-foreground: #FFFFFF;
+    --sidebar-accent: #43308C;
+    --sidebar-accent-foreground: #C2A74A;
+    --sidebar-border: #2A2D4A;
+    --sidebar-ring: #AD9334;
+}
+
+.dark {
+    --background: #0F1020;
+    --foreground: #FFFFFF;
+    --card: #17182B;
+    --card-foreground: #FFFFFF;
+    --popover: #17182B;
+    --popover-foreground: #FFFFFF;
+    --primary: #AD9334;
+    --primary-foreground: #FFFFFF;
+    --secondary: #352A6F;
+    --secondary-foreground: #FFFFFF;
+    --muted: #17182B;
+    --muted-foreground: #8A8CA6;
+    --accent: #C2A74A;
+    --accent-foreground: #0F1020;
+    --destructive: #991B1B;
+    --destructive-foreground: #FCA5A5;
+    --border: #2A2D4A;
+    --input: #2A2D4A;
+    --ring: #AD9334;
+    --chart-1: #AD9334;
+    --chart-2: #C2A74A;
+    --chart-3: #352A6F;
+    --chart-4: #43308C;
+    --chart-5: #FFFFFF;
+    --sidebar: #352A6F;
+    --sidebar-foreground: #FFFFFF;
+    --sidebar-primary: #AD9334;
+    --sidebar-primary-foreground: #FFFFFF;
+    --sidebar-accent: #43308C;
+    --sidebar-accent-foreground: #C2A74A;
+    --sidebar-border: #2A2D4A;
+    --sidebar-ring: #AD9334;
+}
+
+@layer base {
+    * { @apply border-border; }
+    body { @apply bg-background text-foreground; }
+}
