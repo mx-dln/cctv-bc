@@ -15,7 +15,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->configureUploadRuntime();
     }
 
     /**
@@ -24,6 +24,11 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+        \Illuminate\Support\Facades\Event::listen(\Illuminate\Auth\Events\Login::class,
+            fn ($event) => app(\App\Services\ActivityLoggerService::class)->logLogin($event->user));
+        \Illuminate\Support\Facades\Event::listen(\Illuminate\Auth\Events\Logout::class, function ($event) {
+            if ($event->user) app(\App\Services\ActivityLoggerService::class)->logLogout($event->user);
+        });
     }
 
     /**
@@ -46,5 +51,16 @@ class AppServiceProvider extends ServiceProvider
                 ->uncompromised()
             : null,
         );
+    }
+
+    protected function configureUploadRuntime(): void
+    {
+        $memoryLimit = env('CCTV_UPLOAD_MEMORY_LIMIT', '512M');
+        $uploadLimit = env('CCTV_UPLOAD_MAX_FILESIZE', '500M');
+        $postLimit = env('CCTV_UPLOAD_POST_MAX_SIZE', '520M');
+
+        ini_set('memory_limit', $memoryLimit);
+        ini_set('upload_max_filesize', $uploadLimit);
+        ini_set('post_max_size', $postLimit);
     }
 }

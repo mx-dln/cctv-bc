@@ -30,7 +30,7 @@ export default function BlockchainIndex({ transactions, isAvailable, isSimulated
                             isAvailable ? 'border-green-500 text-green-400' : 'border-red-500 text-red-400'
                         }`}>
                             {isAvailable ? <Wifi className="h-4 w-4" /> : <WifiOff className="h-4 w-4" />}
-                            {isAvailable ? 'Connected' : 'Disconnected'}
+                            {isAvailable || isSimulated ? 'Connected' : 'Disconnected'}
                         </Badge>
                     </div>
                 </div>
@@ -93,9 +93,9 @@ export default function BlockchainIndex({ transactions, isAvailable, isSimulated
                                 <thead>
                                     <tr className="border-b border-white/10 text-left text-sm text-gray-400">
                                         <th className="pb-3 font-medium">TX ID</th>
-                                        <th className="pb-3 font-medium">Function</th>
+                                        <th className="pb-3 font-medium">Chaincode</th>
                                         <th className="pb-3 font-medium">Block Number</th>
-                                        <th className="pb-3 font-medium">Node</th>
+                                        <th className="pb-3 font-medium">Channel</th>
                                         <th className="pb-3 font-medium">Status</th>
                                         <th className="pb-3 font-medium">Timestamp</th>
                                         <th className="pb-3 font-medium">Details</th>
@@ -110,9 +110,9 @@ export default function BlockchainIndex({ transactions, isAvailable, isSimulated
                                             className="border-b border-white/5 text-sm transition-colors hover:bg-white/5"
                                         >
                                             <td className="py-3 font-mono text-xs text-[#AD9334]">{tx.transaction_id}</td>
-                                            <td className="py-3 text-gray-300">{tx.function_name}</td>
+                                            <td className="py-3 text-gray-300">{tx.chaincode}</td>
                                             <td className="py-3 font-mono text-xs text-gray-400">{tx.block_number || '-'}</td>
-                                            <td className="py-3 text-xs text-gray-400">{tx.node}</td>
+                                            <td className="py-3 text-xs text-gray-400">{tx.channel}</td>
                                             <td className="py-3">
                                                 <Badge variant="outline" className={`flex w-fit items-center gap-1 ${statusStyles[tx.status] || ''}`}>
                                                     {tx.status === 'committed' ? <CheckCircle2 className="h-3 w-3" /> :

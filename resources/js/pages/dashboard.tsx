@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import {
     Camera, Cctv, ShieldCheck, Siren, Blocks, Activity, Bell, Clock,
     CheckCircle2, XCircle, AlertTriangle, TrendingUp, TrendingDown,
-    Server, Cpu, HardDrive, Monitor,
+    Server, Cpu, HardDrive, Monitor, Database, FileClock, UserRound,
 } from 'lucide-react';
 import {
     AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -20,6 +20,28 @@ const severityBadge: Record<string, string> = {
     high: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-100',
     critical: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100',
 };
+
+const statusBadge: Record<string, string> = {
+    committed: 'border-[#AD9334]/50 bg-[#AD9334]/10 text-[#E8D787]',
+    pending: 'border-yellow-500/50 bg-yellow-500/10 text-yellow-200',
+    failed: 'border-red-500/50 bg-red-500/10 text-red-200',
+};
+
+function shortTxId(transactionId?: string | null) {
+    if (!transactionId) {
+        return 'No transaction ID';
+    }
+
+    return transactionId.length > 18 ? `${transactionId.slice(0, 10)}...${transactionId.slice(-6)}` : transactionId;
+}
+
+function formatDateTime(value?: string | null) {
+    if (!value) {
+        return '-';
+    }
+
+    return new Date(value).toLocaleString();
+}
 
 function StatCard({ title, value, icon: Icon, color, subtitle }: { title: string; value: string | number; icon: any; color: string; subtitle?: string }) {
     return (
@@ -41,7 +63,7 @@ function StatCard({ title, value, icon: Icon, color, subtitle }: { title: string
     );
 }
 
-export default function Dashboard({ stats, dailyEvents, verificationTrend, tamperTrend, blockchainCommitTrend, recentEvents, recentAlerts, cameraStatuses, providerConnected, providerName, providerStats, integrityScore, healthScore, blockchainMode }: any) {
+export default function Dashboard({ stats, dailyEvents, verificationTrend, tamperTrend, blockchainCommitTrend, recentEvents, recentAlerts, cameraStatuses, providerConnected, providerName, providerStats, recentTransactions, recentActivity, blockchainMode }: any) {
     const isDahua = providerName?.toLowerCase().includes('dahua');
     const storageUsage = providerStats?.storage_usage || '0%';
     const cpuUsage = providerStats?.cpu_usage || '0%';
@@ -119,69 +141,107 @@ export default function Dashboard({ stats, dailyEvents, verificationTrend, tampe
                 )}
 
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                    <StatCard title="Total Cameras" value={stats.total_cameras} icon={Camera} color="bg-[#352A6F]" subtitle={`${stats.online_cameras} online, ${stats.offline_cameras} offline`} />
-                    <StatCard title="Events Today" value={stats.events_today} icon={Cctv} color="bg-[#AD9334]" subtitle="From Dahua DVR" />
-                    <StatCard title="Verified Events" value={stats.verified_events} icon={ShieldCheck} color="bg-[#AD9334]" subtitle={`${stats.total_events > 0 ? ((stats.verified_events / stats.total_events) * 100).toFixed(1) : 0}% integrity rate`} />
-                    <StatCard title="Tampered Events" value={stats.tampered_events} icon={Siren} color="bg-red-500" subtitle="Requires investigation" />
+                    <StatCard title="Total CCTV Records" value={stats.total_events} icon={Cctv} color="bg-[#352A6F]" subtitle={`${stats.events_today} registered today`} />
+                    <StatCard title="Verified Records" value={stats.verified_events} icon={ShieldCheck} color="bg-[#AD9334]" subtitle={`${stats.total_events > 0 ? ((stats.verified_events / stats.total_events) * 100).toFixed(1) : 0}% integrity rate`} />
+                    <StatCard title="Altered Records" value={stats.tampered_events} icon={Siren} color="bg-red-500" subtitle="Hash mismatch detected" />
+                    <StatCard title="Missing Records" value={stats.missing_events ?? 0} icon={AlertTriangle} color="bg-orange-500" subtitle="Footage unavailable" />
                 </div>
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                    <StatCard title="Total Cameras" value={stats.total_cameras} icon={Camera} color="bg-[#352A6F]" subtitle={`${stats.online_cameras} online, ${stats.offline_cameras} offline`} />
                     <StatCard title="Blockchain TX" value={stats.blockchain_transactions} icon={Blocks} color="bg-[#352A6F]" subtitle={`${stats.successful_transactions} successful`} />
                     <StatCard title="Active Alerts" value={stats.active_alerts} icon={Bell} color="bg-[#AD9334]" subtitle={`${stats.critical_alerts} critical`} />
-                    <StatCard title="Total Events" value={stats.total_events} icon={Activity} color="bg-[#352A6F]" subtitle="All time" />
-                    <StatCard title="Pending" value={stats.pending_events} icon={Clock} color="bg-[#C2A74A]" subtitle="Awaiting verification" />
+                    <StatCard title="Registered" value={stats.registered_events ?? 0} icon={Activity} color="bg-[#352A6F]" subtitle="Committed, awaiting verification" />
+                    <StatCard title="Pending" value={stats.pending_events} icon={Clock} color="bg-[#C2A74A]" subtitle="Awaiting registration" />
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-2">
-                    <Card className="border-[#AD9334]/20 bg-gradient-to-br from-[#352A6F]/20 to-gray-800/80 backdrop-blur-xl">
-                        <CardHeader className="pb-2">
-                            <CardTitle className="flex items-center gap-2 text-sm text-gray-400">
-                                <ShieldCheck className="h-4 w-4 text-[#AD9334]" /> Integrity Score
+                <div className="grid gap-6 lg:grid-cols-[0.85fr_1.15fr_1.4fr]">
+                    <Card className="border-white/10 bg-gradient-to-br from-gray-900/80 to-gray-800/80 backdrop-blur-xl">
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2 text-white">
+                                <Database className="h-4 w-4 text-[#AD9334]" />
+                                Blockchain
                             </CardTitle>
+                            <CardDescription>Ledger connection mode</CardDescription>
                         </CardHeader>
-                        <CardContent>
-                            <div className="flex items-center gap-4">
-                                <div className="relative flex h-20 w-20 items-center justify-center shrink-0">
-                                    <svg className="absolute inset-0 h-20 w-20 -rotate-90" viewBox="0 0 60 60">
-                                        <circle cx="30" cy="30" r="26" fill="none" stroke="#2A2D4A" strokeWidth="4" />
-                                        <circle cx="30" cy="30" r="26" fill="none" stroke="currentColor" strokeWidth="4"
-                                            strokeDasharray={`${(integrityScore?.score / 100) * 163.36} 163.36`}
-                                            strokeLinecap="round" className={integrityScore?.score >= 85 ? 'text-[#AD9334]' : integrityScore?.score >= 70 ? 'text-yellow-400' : 'text-red-400'} />
-                                    </svg>
-                                    <span className={`text-lg font-bold ${integrityScore?.score >= 85 ? 'text-[#AD9334]' : integrityScore?.score >= 70 ? 'text-yellow-400' : 'text-red-400'}`}>
-                                        {integrityScore?.score ?? 100}%
-                                    </span>
-                                </div>
-                                <div className="text-sm text-gray-400">
-                                    <p>{integrityScore?.verified ?? 0} verified / {integrityScore?.total ?? 0} total</p>
-                                    <p className="text-xs text-gray-500 mt-0.5">{integrityScore?.label ?? 'Excellent'}</p>
-                                </div>
+                        <CardContent className="space-y-4">
+                            <div>
+                                <Badge variant="outline" className="border-[#AD9334]/50 bg-[#AD9334]/10 text-[#E8D787]">
+                                    {blockchainMode?.label ?? 'Unknown'}
+                                </Badge>
+                            </div>
+                            <div className="space-y-2 rounded-lg bg-white/5 p-3">
+                                <p className="text-xs uppercase tracking-wide text-gray-500">Confirmed Transactions</p>
+                                <p className="text-2xl font-semibold text-white">{stats.successful_transactions}</p>
+                                <p className="text-xs text-gray-400">
+                                    Permissioned chain-of-custody ledger for CCTV evidence integrity.
+                                </p>
                             </div>
                         </CardContent>
                     </Card>
-                    <Card className="border-[#AD9334]/20 bg-gradient-to-br from-[#352A6F]/20 to-gray-800/80 backdrop-blur-xl">
-                        <CardHeader className="pb-2">
-                            <CardTitle className="flex items-center gap-2 text-sm text-gray-400">
-                                <Activity className="h-4 w-4 text-[#AD9334]" /> Forensic Health
+
+                    <Card className="border-white/10 bg-gradient-to-br from-gray-900/80 to-gray-800/80 backdrop-blur-xl">
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2 text-white">
+                                <Blocks className="h-4 w-4 text-[#AD9334]" />
+                                Recent Transactions
                             </CardTitle>
+                            <CardDescription>Latest blockchain commit records</CardDescription>
                         </CardHeader>
-                        <CardContent>
-                            <div className="flex items-center gap-4">
-                                <div className="relative flex h-20 w-20 items-center justify-center shrink-0">
-                                    <svg className="absolute inset-0 h-20 w-20 -rotate-90" viewBox="0 0 60 60">
-                                        <circle cx="30" cy="30" r="26" fill="none" stroke="#2A2D4A" strokeWidth="4" />
-                                        <circle cx="30" cy="30" r="26" fill="none" stroke="currentColor" strokeWidth="4"
-                                            strokeDasharray={`${(healthScore?.score / 100) * 163.36} 163.36`}
-                                            strokeLinecap="round" className={healthScore?.score >= 85 ? 'text-[#AD9334]' : healthScore?.score >= 70 ? 'text-yellow-400' : 'text-red-400'} />
-                                    </svg>
-                                    <span className={`text-lg font-bold ${healthScore?.score >= 85 ? 'text-[#AD9334]' : healthScore?.score >= 70 ? 'text-yellow-400' : 'text-red-400'}`}>
-                                        {healthScore?.score ?? 100}%
-                                    </span>
+                        <CardContent className="max-h-[320px] space-y-3 overflow-y-auto">
+                            {recentTransactions.map((tx: any) => (
+                                <div key={tx.id} className="rounded-lg bg-white/5 p-3">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div className="min-w-0">
+                                            <p className="break-all text-sm font-medium text-gray-100">{shortTxId(tx.transaction_id)}</p>
+                                            <p className="mt-1 text-xs text-gray-500">{formatDateTime(tx.created_at)}</p>
+                                        </div>
+                                        <Badge variant="outline" className={`shrink-0 capitalize ${statusBadge[tx.status] ?? 'border-gray-500/50 text-gray-300'}`}>
+                                            {tx.status}
+                                        </Badge>
+                                    </div>
                                 </div>
-                                <div className="text-sm text-gray-400">
-                                    <p>Blockchain: <span className={blockchainMode?.mode === 'fabric_connected' ? 'text-green-400' : blockchainMode?.mode === 'fabric_ready' ? 'text-yellow-400' : 'text-[#AD9334]'}>{blockchainMode?.label ?? 'Simulation'}</span></p>
-                                    <p className="text-xs text-gray-500 mt-0.5">{healthScore?.label ?? 'Excellent'}</p>
+                            ))}
+                            {recentTransactions.length === 0 && (
+                                <div className="rounded-lg border border-dashed border-white/10 p-6 text-center text-sm text-gray-500">
+                                    No blockchain transactions yet
                                 </div>
-                            </div>
+                            )}
+                        </CardContent>
+                    </Card>
+
+                    <Card className="border-white/10 bg-gradient-to-br from-gray-900/80 to-gray-800/80 backdrop-blur-xl">
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2 text-white">
+                                <FileClock className="h-4 w-4 text-[#AD9334]" />
+                                Audit Trail
+                            </CardTitle>
+                            <CardDescription>Recent accountable system actions</CardDescription>
+                        </CardHeader>
+                        <CardContent className="max-h-[320px] space-y-3 overflow-y-auto">
+                            {recentActivity.map((entry: any) => (
+                                <div key={entry.id} className="flex gap-3 rounded-lg bg-white/5 p-3">
+                                    <div className="mt-0.5 rounded-md bg-[#352A6F]/60 p-2 text-[#E8D787]">
+                                        <UserRound className="h-4 w-4" />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                                            <p className="text-sm font-medium text-gray-100">{entry.user?.name ?? 'System'}</p>
+                                            <span className="text-xs text-gray-600">/</span>
+                                            <p className="text-sm text-gray-300">{String(entry.action).replaceAll('_', ' ')}</p>
+                                        </div>
+                                        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-500">
+                                            <span>{formatDateTime(entry.created_at)}</span>
+                                            {entry.properties?.record_id && <span className="rounded bg-white/5 px-1.5 py-0.5 text-gray-300">{entry.properties.record_id}</span>}
+                                            {entry.properties?.result && <span className="capitalize text-[#E8D787]">{entry.properties.result}</span>}
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                            {recentActivity.length === 0 && (
+                                <div className="rounded-lg border border-dashed border-white/10 p-6 text-center text-sm text-gray-500">
+                                    No audit entries yet
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
                 </div>

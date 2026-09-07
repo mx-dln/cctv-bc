@@ -36,6 +36,22 @@ class AlertService
         );
     }
 
+    public function createMissingFootageAlert(GeneratedLog $log): Alert
+    {
+        return $this->createAlert(
+            'missing_footage',
+            'critical',
+            'Missing CCTV footage for record ' . ($log->record_id ?? $log->event_id),
+            $log,
+            [
+                'record_id' => $log->record_id,
+                'event_id' => $log->event_id,
+                'camera_id' => $log->camera->provider_camera_id ?? null,
+                'filename' => $log->filename,
+            ]
+        );
+    }
+
     public function createBlockchainUnavailableAlert(): Alert
     {
         return $this->createSystemAlert(

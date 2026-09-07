@@ -1,3 +1,4 @@
+import { apiFetch } from '@/lib/api-fetch';
 import { Head, router } from '@inertiajs/react';
 import { motion } from 'framer-motion';
 import { Bell, AlertTriangle, CheckCircle2, Loader2, Filter } from 'lucide-react';
@@ -36,7 +37,7 @@ export default function AlertIndex({ alerts, filters }: { alerts: { data: Alert[
     const handleResolve = async (alert: Alert) => {
         setResolving(alert.id);
         try {
-            await fetch(`/alerts/${alert.id}/resolve`, { method: 'POST' });
+            await apiFetch(`/alerts/${alert.id}/resolve`, { method: 'POST' });
             toast.success('Alert resolved');
             router.reload({ only: ['alerts'] });
         } catch {
@@ -64,37 +65,38 @@ export default function AlertIndex({ alerts, filters }: { alerts: { data: Alert[
                     </CardHeader>
                     <CardContent>
                         <div className="flex gap-3">
-                            <Select value={severity} onValueChange={setSeverity}>
+                            <Select value={severity || 'all'} onValueChange={value => setSeverity(value === 'all' ? '' : value)}>
                                 <SelectTrigger className="w-full border-white/10 bg-white/5 text-white">
                                     <SelectValue placeholder="Severity" />
                                 </SelectTrigger>
                                 <SelectContent position="popper" className="w-[--radix-select-trigger-width] border-white/10 bg-gray-900 text-white">
-                                    <SelectItem value="">All Severities</SelectItem>
+                                    <SelectItem value="all">All Severities</SelectItem>
                                     <SelectItem value="low">Low</SelectItem>
                                     <SelectItem value="medium">Medium</SelectItem>
                                     <SelectItem value="high">High</SelectItem>
                                     <SelectItem value="critical">Critical</SelectItem>
                                 </SelectContent>
                             </Select>
-                            <Select value={type} onValueChange={setType}>
+                            <Select value={type || 'all'} onValueChange={value => setType(value === 'all' ? '' : value)}>
                                 <SelectTrigger className="w-full border-white/10 bg-white/5 text-white">
                                     <SelectValue placeholder="Type" />
                                 </SelectTrigger>
                                 <SelectContent position="popper" className="w-[--radix-select-trigger-width] border-white/10 bg-gray-900 text-white">
-                                    <SelectItem value="">All Types</SelectItem>
+                                    <SelectItem value="all">All Types</SelectItem>
                                     <SelectItem value="tamper_detected">Tamper Detected</SelectItem>
+                                    <SelectItem value="missing_footage">Missing Footage</SelectItem>
                                     <SelectItem value="missing_hash">Missing Hash</SelectItem>
                                     <SelectItem value="blockchain_unavailable">Blockchain Unavailable</SelectItem>
                                     <SelectItem value="duplicate_log">Duplicate Log</SelectItem>
                                     <SelectItem value="unauthorized_change">Unauthorized Change</SelectItem>
                                 </SelectContent>
                             </Select>
-                            <Select value={status} onValueChange={setStatus}>
+                            <Select value={status || 'all'} onValueChange={value => setStatus(value === 'all' ? '' : value)}>
                                 <SelectTrigger className="w-full border-white/10 bg-white/5 text-white">
                                     <SelectValue placeholder="Status" />
                                 </SelectTrigger>
                                 <SelectContent position="popper" className="w-[--radix-select-trigger-width] border-white/10 bg-gray-900 text-white">
-                                    <SelectItem value="">All</SelectItem>
+                                    <SelectItem value="all">All</SelectItem>
                                     <SelectItem value="unresolved">Unresolved</SelectItem>
                                 </SelectContent>
                             </Select>

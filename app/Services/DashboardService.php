@@ -21,6 +21,8 @@ class DashboardService
             'total_events' => GeneratedLog::count(),
             'verified_events' => GeneratedLog::where('status', 'verified')->count(),
             'tampered_events' => GeneratedLog::where('status', 'tampered')->count(),
+            'missing_events' => GeneratedLog::where('status', 'missing')->count(),
+            'registered_events' => GeneratedLog::where('status', 'registered')->count(),
             'pending_events' => GeneratedLog::where('status', 'pending')->count(),
             'blockchain_transactions' => BlockchainTransaction::count(),
             'successful_transactions' => BlockchainTransaction::where('status', 'committed')->count(),
@@ -36,7 +38,8 @@ class DashboardService
             DB::raw("DATE(started_at) as date"),
             DB::raw("COUNT(*) as total"),
             DB::raw("SUM(CASE WHEN status = 'verified' THEN 1 ELSE 0 END) as verified"),
-            DB::raw("SUM(CASE WHEN status = 'tampered' THEN 1 ELSE 0 END) as tampered")
+            DB::raw("SUM(CASE WHEN status = 'tampered' THEN 1 ELSE 0 END) as tampered"),
+            DB::raw("SUM(CASE WHEN status = 'missing' THEN 1 ELSE 0 END) as missing")
         )
             ->where('started_at', '>=', now()->subDays($days))
             ->groupBy('date')
@@ -50,7 +53,8 @@ class DashboardService
         return GeneratedLog::select(
             DB::raw("DATE(started_at) as date"),
             DB::raw("SUM(CASE WHEN status = 'verified' THEN 1 ELSE 0 END) as verified_count"),
-            DB::raw("SUM(CASE WHEN status = 'tampered' THEN 1 ELSE 0 END) as tampered_count")
+            DB::raw("SUM(CASE WHEN status = 'tampered' THEN 1 ELSE 0 END) as tampered_count"),
+            DB::raw("SUM(CASE WHEN status = 'missing' THEN 1 ELSE 0 END) as missing_count")
         )
             ->where('started_at', '>=', now()->subDays($days))
             ->groupBy('date')

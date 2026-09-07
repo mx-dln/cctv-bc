@@ -1,3 +1,4 @@
+import { apiFetch } from '@/lib/api-fetch';
 import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
 import { FileText, Download, FileDown, FileSpreadsheet } from 'lucide-react';
@@ -13,7 +14,7 @@ export default function AuditIndex({ reports }: { reports: { data: AuditReport[]
     const handleGenerate = async (format: string) => {
         setGenerating(true);
         try {
-            const res = await fetch('/audit/generate-report', {
+            const res = await apiFetch('/audit/generate-report', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

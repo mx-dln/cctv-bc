@@ -40,15 +40,15 @@ export default function BlockchainShow({ transaction }: { transaction: Blockchai
                             </div>
                             <div className="flex justify-between border-b border-white/10 pb-2">
                                 <span className="text-sm text-gray-400">Channel</span>
-                                <span className="text-sm text-white">{transaction.channel_name}</span>
+                                <span className="text-sm text-white">{transaction.channel}</span>
                             </div>
                             <div className="flex justify-between border-b border-white/10 pb-2">
                                 <span className="text-sm text-gray-400">Chaincode</span>
-                                <span className="text-sm text-white">{transaction.chaincode_name}</span>
+                                <span className="text-sm text-white">{transaction.chaincode}</span>
                             </div>
                             <div className="flex justify-between border-b border-white/10 pb-2">
                                 <span className="text-sm text-gray-400">Function</span>
-                                <span className="text-sm font-mono text-[#AD9334]">{transaction.function_name}</span>
+                                <span className="text-sm font-mono text-[#AD9334]">{'CommitCCTVCustodyLog'}</span>
                             </div>
                             <div className="flex justify-between border-b border-white/10 pb-2">
                                 <span className="text-sm text-gray-400">Block Number</span>
@@ -56,7 +56,7 @@ export default function BlockchainShow({ transaction }: { transaction: Blockchai
                             </div>
                             <div className="flex justify-between border-b border-white/10 pb-2">
                                 <span className="text-sm text-gray-400">Node</span>
-                                <span className="text-sm text-white">{transaction.node}</span>
+                                <span className="text-sm text-white">Fabric gateway</span>
                             </div>
                             <div className="flex justify-between">
                                 <span className="text-sm text-gray-400">Committed At</span>
@@ -77,7 +77,7 @@ export default function BlockchainShow({ transaction }: { transaction: Blockchai
                             <div>
                                 <h4 className="mb-2 text-sm font-medium text-gray-400">Arguments</h4>
                                 <pre className="overflow-x-auto rounded-lg bg-black/50 p-3 text-xs text-green-400">
-                                    {JSON.stringify(transaction.arguments, null, 2)}
+                                    {JSON.stringify({ log_id: transaction.log_id }, null, 2)}
                                 </pre>
                             </div>
                             {transaction.response && (

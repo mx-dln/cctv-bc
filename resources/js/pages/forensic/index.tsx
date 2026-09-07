@@ -1,3 +1,4 @@
+import { apiFetch } from '@/lib/api-fetch';
 import { Head, router } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
@@ -20,7 +21,7 @@ export default function ForensicIndex() {
     const [loadingEvents, setLoadingEvents] = useState(true);
 
     useEffect(() => {
-        fetch('/events?limit=100', { headers: { 'Accept': 'application/json' } })
+        apiFetch('/events?limit=100', { headers: { 'Accept': 'application/json' } })
             .then(r => r.json())
             .then(data => {
                 setEvents(data.logs?.data || []);
@@ -34,7 +35,7 @@ export default function ForensicIndex() {
         setAnalyzing(true);
         setResult(null);
         try {
-            const res = await fetch('/forensic/analyze', {
+            const res = await apiFetch('/forensic/analyze', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ log_id: eventId }),

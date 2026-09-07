@@ -1,0 +1,591 @@
+Hyperledger Fabric setup guide for CCTV Blockchain Chain-of-Custody
+==================================================================
+
+Purpose
+-------
+
+This guide explains how to install and run the Hyperledger Fabric setup used by this Laravel capstone project on another Windows device.
+
+The Laravel project stays in Windows:
+
+C:\Users\micha\OneDrive\Documents\Sites\cctv-bc
+
+The Fabric network runs inside Ubuntu WSL:
+
+/home/michael/fabric-samples/test-network
+
+Important:
+
+- Run Windows commands in Windows PowerShell.
+- Run Linux commands in Ubuntu WSL.
+- Do not run Fabric from C:\Windows\System32.
+- Do not run Fabric from /mnt/c/... inside WSL.
+- Do not paste Markdown links like [https://example.com](https://example.com) into the terminal. Paste the plain URL only.
+- Keep the gateway PowerShell terminal open while testing Laravel.
+
+
+Step 0 - Install software on Windows
+------------------------------------
+
+Install Git for Windows:
+
+https://git-scm.com/download/win
+
+Install Docker Desktop:
+
+https://www.docker.com/products/docker-desktop/
+
+Install Ubuntu WSL from Windows PowerShell:
+
+wsl --install -d Ubuntu
+
+If Windows asks for a restart, restart the computer.
+
+Open Ubuntu and create the Linux user when asked. In our setup the Ubuntu user was:
+
+michael
+
+
+Step 1 - Enable Docker Desktop WSL integration
+----------------------------------------------
+
+Open Docker Desktop.
+
+Go to:
+
+Settings > Resources > WSL Integration
+
+Turn on:
+
+- Enable integration with my default WSL distro
+- Ubuntu
+
+Click:
+
+Apply & Restart
+
+
+Step 2 - Verify Docker from Windows PowerShell
+----------------------------------------------
+
+Open Windows PowerShell and run:
+
+docker --version
+docker compose version
+docker info
+docker run hello-world
+
+Expected successful output examples:
+
+Docker version 29.7.2
+Docker Compose version v5.5.0
+Operating System: Docker Desktop
+Hello from Docker!
+
+If docker info says this:
+
+failed to connect to the docker API at npipe:////./pipe/docker_engine
+
+Fix:
+
+Open Docker Desktop and wait until it is fully running.
+
+
+Step 3 - Open Ubuntu WSL
+------------------------
+
+From Windows PowerShell:
+
+wsl -d Ubuntu
+
+You should now see a Linux prompt like:
+
+michael@JoyceKael:~$
+
+If you see this instead, you are still in Windows PowerShell:
+
+PS C:\Users\micha>
+
+
+Step 4 - Verify Docker inside Ubuntu
+------------------------------------
+
+Inside Ubuntu:
+
+docker --version
+docker compose version
+docker ps
+
+If Docker is not available inside Ubuntu, go back to Docker Desktop and enable WSL integration for Ubuntu.
+
+
+Step 5 - Install Ubuntu dependencies
+------------------------------------
+
+Inside Ubuntu:
+
+sudo apt update
+sudo apt install -y git curl jq golang-go
+
+Verify:
+
+git --version
+curl --version
+jq --version
+go version
+
+These dependencies matter because:
+
+- git downloads Fabric samples.
+- curl downloads the Fabric install script.
+- jq is required by Fabric channel configuration scripts.
+- Go is required to package/deploy Go chaincode.
+
+
+Step 6 - Download Fabric samples and Fabric binaries
+----------------------------------------------------
+
+Inside Ubuntu:
+
+cd ~
+git clone https://github.com/hyperledger/fabric-samples.git
+cd fabric-samples
+curl -sSLO https://raw.githubusercontent.com/hyperledger/fabric/main/scripts/install-fabric.sh
+chmod +x install-fabric.sh
+./install-fabric.sh docker binary
+
+Expected images from our setup:
+
+- ghcr.io/hyperledger/fabric-peer:2.5.16
+- ghcr.io/hyperledger/fabric-orderer:2.5.16
+- ghcr.io/hyperledger/fabric-ccenv:2.5.16
+- ghcr.io/hyperledger/fabric-baseos:2.5.16
+- ghcr.io/hyperledger/fabric-ca:1.5.17
+
+Verify images:
+
+docker images | grep hyperledger
+
+
+Step 7 - Start the Fabric test network
+--------------------------------------
+
+Inside Ubuntu:
+
+cd ~/fabric-samples/test-network
+./network.sh down
+./network.sh up createChannel -ca
+
+Expected success lines:
+
+Channel 'mychannel' created
+Successfully submitted proposal to join channel
+Anchor peer set for org 'Org1MSP'
+Anchor peer set for org 'Org2MSP'
+Channel 'mychannel' joined
+
+Verify containers:
+
+docker ps
+
+Expected network containers:
+
+- peer0.org1.example.com
+- peer0.org2.example.com
+- orderer.example.com
+- ca_org1
+- ca_org2
+- ca_orderer
+
+
+Step 8 - Optional: deploy official sample chaincode
+---------------------------------------------------
+
+This proves the default Fabric network works before deploying the CCTV chaincode.
+
+Inside Ubuntu:
+
+cd ~/fabric-samples/test-network
+./network.sh deployCC -ccn basic -ccp ../asset-transfer-basic/chaincode-go -ccl go
+
+Expected success lines:
+
+Chaincode definition committed on channel 'mychannel'
+Query chaincode definition successful on peer0.org1
+Query chaincode definition successful on peer0.org2
+Chaincode initialization is not required
+
+
+Step 9 - Deploy the CCTV custody chaincode
+------------------------------------------
+
+The CCTV chaincode is inside the Laravel project:
+
+C:\Users\micha\OneDrive\Documents\Sites\cctv-bc\hyperledger\chaincode\cctv-custody-go
+
+Inside Ubuntu, copy it from Windows into the Linux Fabric samples folder:
+
+cd ~/fabric-samples/test-network
+mkdir -p ~/fabric-samples/cctv-chaincode
+rm -f cctv-custody.tar.gz
+rm -rf ~/fabric-samples/cctv-chaincode/cctv-custody-go
+cp -r /mnt/c/Users/micha/OneDrive/Documents/Sites/cctv-bc/hyperledger/chaincode/cctv-custody-go ~/fabric-samples/cctv-chaincode/
+
+Prepare Go dependencies:
+
+cd ~/fabric-samples/cctv-chaincode/cctv-custody-go
+go mod tidy
+
+Deploy:
+
+cd ~/fabric-samples/test-network
+./network.sh deployCC -ccn cctv-custody -ccp ../cctv-chaincode/cctv-custody-go -ccl go
+
+Expected success lines:
+
+Chaincode definition committed on channel 'mychannel'
+Committed chaincode definition for chaincode 'cctv-custody' on channel 'mychannel'
+Approvals: [Org1MSP: true, Org2MSP: true]
+Query chaincode definition successful on peer0.org1
+Query chaincode definition successful on peer0.org2
+Chaincode initialization is not required
+
+Verify containers:
+
+docker ps
+
+After the first real CCTV transaction, Docker may also show cctv-custody chaincode containers.
+
+
+Step 10 - Install the Node Fabric gateway dependencies
+------------------------------------------------------
+
+The Laravel app does not talk directly to the peer container. It calls a Node gateway API in:
+
+C:\Users\micha\OneDrive\Documents\Sites\cctv-bc\hyperledger\gateway
+
+Open Windows PowerShell:
+
+cd C:\Users\micha\OneDrive\Documents\Sites\cctv-bc\hyperledger\gateway
+npm install
+
+
+Step 11 - Start the Node Fabric gateway
+---------------------------------------
+
+Run this in Windows PowerShell, not Ubuntu:
+
+cd C:\Users\micha\OneDrive\Documents\Sites\cctv-bc\hyperledger\gateway
+
+$env:FABRIC_TLS_CERT_PATH="\\wsl.localhost\Ubuntu\home\michael\fabric-samples\test-network\organizations\peerOrganizations\org1.example.com\peers\peer0.org1.example.com\tls\ca.crt"
+$env:FABRIC_CERT_DIRECTORY="\\wsl.localhost\Ubuntu\home\michael\fabric-samples\test-network\organizations\peerOrganizations\org1.example.com\users\Admin@org1.example.com\msp\signcerts"
+$env:FABRIC_KEY_DIRECTORY="\\wsl.localhost\Ubuntu\home\michael\fabric-samples\test-network\organizations\peerOrganizations\org1.example.com\users\Admin@org1.example.com\msp\keystore"
+$env:FABRIC_PEER_ENDPOINT="localhost:7051"
+$env:FABRIC_PEER_HOST_ALIAS="peer0.org1.example.com"
+$env:FABRIC_MSP_ID="Org1MSP"
+$env:FABRIC_CHANNEL="mychannel"
+$env:FABRIC_CHAINCODE="cctv-custody"
+$env:PORT="8787"
+
+npm start
+
+Expected output:
+
+CCTV Fabric gateway listening on http://127.0.0.1:8787
+
+Leave this PowerShell window open.
+
+
+Step 12 - Test the gateway health endpoint
+------------------------------------------
+
+Open another Windows PowerShell window and run:
+
+curl.exe http://127.0.0.1:8787/health
+
+Expected output:
+
+{"available":true,"gateway":"Hyperledger Fabric","channel":"mychannel","chaincode":"cctv-custody"}
+
+
+Step 13 - Configure Laravel for Hyperledger Fabric
+--------------------------------------------------
+
+In this project, .env should contain:
+
+CCTV_PROVIDER=mock
+HASH_ALGORITHM=sha256
+BLOCKCHAIN_SIMULATE=false
+BLOCKCHAIN_PEER_ENDPOINT=127.0.0.1:8787
+BLOCKCHAIN_CHANNEL=mychannel
+BLOCKCHAIN_CHAINCODE=cctv-custody
+BLOCKCHAIN_PEER_NODE=peer0.org1.example.com
+
+After editing .env, run this in Windows PowerShell from the Laravel project:
+
+cd C:\Users\micha\OneDrive\Documents\Sites\cctv-bc
+php artisan optimize:clear
+php artisan config:clear
+
+
+Step 14 - Start Laravel
+-----------------------
+
+Depending on your local setup, use either Herd/Valet-style domain:
+
+https://cctv-bc.test
+
+Or start Laravel manually:
+
+cd C:\Users\micha\OneDrive\Documents\Sites\cctv-bc
+php artisan serve --host=127.0.0.1 --port=8011
+
+Then open:
+
+http://127.0.0.1:8011
+
+
+Step 15 - Test the full CCTV-to-Fabric flow
+-------------------------------------------
+
+Login:
+
+admin@ficobank.com
+password
+
+Then:
+
+1. Open CCTV Register.
+2. Choose an actual small MP4 file using "CCTV video file".
+3. Leave "Existing relative storage path" empty when uploading a new file.
+4. Fill filename, resolution, date/time, and recording information if needed.
+5. Click Register and Commit.
+6. The new record should show Fabric: committed.
+7. Open Blockchain.
+8. The transaction ID should be a long Fabric hex string, not a TX-... demo ID.
+9. Open Verification.
+10. Click Verify for the uploaded record.
+11. Expected result is verified.
+
+Example real Fabric transaction ID:
+
+4790104d2665818ffad85784aa1f3a00afa29b5b6433982861508c05f4d07b22
+
+Example block number from our test:
+
+13
+
+
+Step 16 - Retry a pending record
+--------------------------------
+
+If a record shows:
+
+Fabric: pending
+
+It means Laravel created the local record but Fabric did not confirm the transaction.
+
+This can happen if:
+
+- Gateway was not running.
+- Fabric was still restarting.
+- Old chaincode was deployed.
+- The gateway had not been restarted after code changes.
+
+Fix:
+
+1. Make sure Ubuntu Fabric network is running.
+2. Make sure the gateway PowerShell window is running npm start.
+3. Run curl.exe http://127.0.0.1:8787/health.
+4. On CCTV Register, click Commit on the pending record.
+5. Refresh the page.
+
+The project also supports retry through Laravel code; after retry success the transaction becomes committed and receives a real Fabric transaction ID.
+
+
+Common mistakes and fixes we encountered
+----------------------------------------
+
+Mistake:
+Running git clone from C:\Windows\System32.
+
+Error:
+fatal: could not create work tree dir 'fabric-samples': Permission denied
+
+Fix:
+Clone inside a user folder or inside Ubuntu home, not System32.
+
+
+Mistake:
+Typing /fabric-samples/ in PowerShell.
+
+Error:
+/fabric-samples/ is not recognized as a command.
+
+Fix:
+/fabric-samples/ is a .gitignore entry, not a terminal command.
+
+
+Mistake:
+Running a quoted Git Bash executable without PowerShell call operator.
+
+Error:
+Unexpected token 'install-fabric.sh'
+
+Fix:
+Use & before the quoted executable:
+
+& "C:\Program Files\Git\bin\bash.exe" install-fabric.sh docker binary
+
+
+Mistake:
+Running Fabric from Git Bash against a Windows/OneDrive path.
+
+Error:
+mkdir C:\Program Files\Git\var: Access is denied
+
+Fix:
+Use Ubuntu WSL and run Fabric from /home/michael/fabric-samples.
+
+
+Mistake:
+Running Fabric from /mnt/c/... inside Ubuntu.
+
+Error examples:
+/etc/hyperledger/fabric/msp does not exist
+/var/hyperledger/orderer/msp/signcerts does not exist
+
+Fix:
+Clone fabric-samples inside Ubuntu home:
+
+cd ~
+git clone https://github.com/hyperledger/fabric-samples.git
+
+
+Mistake:
+Missing jq.
+
+Error:
+jq: command not found
+
+Fix:
+sudo apt install -y jq
+
+
+Mistake:
+Missing Go.
+
+Error:
+go: command not found
+
+Fix:
+sudo apt install -y golang-go
+
+
+Mistake:
+Running PowerShell gateway commands inside Ubuntu.
+
+Error examples:
+-bash: cd: C:UsersmichaOneDriveDocumentsSitescctv-bchyperledgergateway: No such file or directory
+:FABRIC_TLS_CERT_PATH=... command not found
+npm error enoent Could not read package.json
+
+Fix:
+Run the gateway commands in Windows PowerShell, not Ubuntu.
+
+
+Mistake:
+Seeing Verification result: unavailable on an old NVR-only record.
+
+Reason:
+The record used nvr://... and Laravel did not have local video bytes to hash.
+
+Fix:
+Upload an actual MP4 file through CCTV Register, or import the NVR footage into local storage first.
+
+
+Mistake:
+Seeing Fabric: pending after an earlier failed commit.
+
+Reason:
+That local database row was created before Fabric/gateway was working.
+
+Fix:
+Click Commit on the pending record after Fabric and the gateway are healthy.
+
+
+Useful daily startup sequence
+-----------------------------
+
+Every time you want to demo the project:
+
+1. Open Docker Desktop.
+
+2. Open Ubuntu:
+
+wsl -d Ubuntu
+
+3. Start or confirm Fabric:
+
+cd ~/fabric-samples/test-network
+docker ps
+
+If containers are missing:
+
+./network.sh up createChannel -ca
+
+4. Open Windows PowerShell and start the gateway:
+
+cd C:\Users\micha\OneDrive\Documents\Sites\cctv-bc\hyperledger\gateway
+$env:FABRIC_TLS_CERT_PATH="\\wsl.localhost\Ubuntu\home\michael\fabric-samples\test-network\organizations\peerOrganizations\org1.example.com\peers\peer0.org1.example.com\tls\ca.crt"
+$env:FABRIC_CERT_DIRECTORY="\\wsl.localhost\Ubuntu\home\michael\fabric-samples\test-network\organizations\peerOrganizations\org1.example.com\users\Admin@org1.example.com\msp\signcerts"
+$env:FABRIC_KEY_DIRECTORY="\\wsl.localhost\Ubuntu\home\michael\fabric-samples\test-network\organizations\peerOrganizations\org1.example.com\users\Admin@org1.example.com\msp\keystore"
+npm start
+
+5. In another Windows PowerShell, test:
+
+curl.exe http://127.0.0.1:8787/health
+
+6. Start or open Laravel:
+
+https://cctv-bc.test
+
+or:
+
+cd C:\Users\micha\OneDrive\Documents\Sites\cctv-bc
+php artisan serve --host=127.0.0.1 --port=8011
+
+
+Project files added for Hyperledger
+-----------------------------------
+
+Chaincode:
+
+C:\Users\micha\OneDrive\Documents\Sites\cctv-bc\hyperledger\chaincode\cctv-custody-go\main.go
+C:\Users\micha\OneDrive\Documents\Sites\cctv-bc\hyperledger\chaincode\cctv-custody-go\go.mod
+C:\Users\micha\OneDrive\Documents\Sites\cctv-bc\hyperledger\chaincode\cctv-custody-go\go.sum
+
+Gateway:
+
+C:\Users\micha\OneDrive\Documents\Sites\cctv-bc\hyperledger\gateway\server.js
+C:\Users\micha\OneDrive\Documents\Sites\cctv-bc\hyperledger\gateway\package.json
+C:\Users\micha\OneDrive\Documents\Sites\cctv-bc\hyperledger\gateway\package-lock.json
+
+Laravel integration:
+
+C:\Users\micha\OneDrive\Documents\Sites\cctv-bc\app\Services\BlockchainService.php
+C:\Users\micha\OneDrive\Documents\Sites\cctv-bc\config\chainofcustody.php
+C:\Users\micha\OneDrive\Documents\Sites\cctv-bc\.env
+
+
+References
+----------
+
+Official Hyperledger Fabric test network documentation:
+https://hyperledger-fabric.readthedocs.io/en/latest/test_network.html
+
+Official Hyperledger Fabric chaincode deployment documentation:
+https://hyperledger-fabric.readthedocs.io/en/latest/deploy_chaincode.html
+
+Official Fabric Gateway documentation:
+https://hyperledger-fabric.readthedocs.io/en/latest/gateway.html

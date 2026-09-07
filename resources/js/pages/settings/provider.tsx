@@ -1,3 +1,4 @@
+import { apiFetch } from '@/lib/api-fetch';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
@@ -9,7 +10,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Switch } from '@/components/ui/switch';
 import SettingsNav from '@/components/settings-nav';
 import { toast } from 'sonner';
 
@@ -42,7 +42,7 @@ export default function ProviderSettings({ connections, availableProviders }: { 
             host: conn.host || '',
             port: conn.port?.toString() || '80',
             username: conn.username || 'admin',
-            password: conn.password ? '***' : '',
+            password: '',
             https_enabled: conn.https_enabled || false,
             polling_interval: conn.polling_interval?.toString() || '60',
             connection_timeout: conn.connection_timeout?.toString() || '15',
@@ -55,18 +55,19 @@ export default function ProviderSettings({ connections, availableProviders }: { 
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        const submit = editId ? put(`/settings/provider/${editId}`) : post('/settings/provider');
-        submit.then(() => {
+        const options = { onSuccess: () => {
             setOpen(false);
             toast.success(editId ? 'Connection updated' : 'Connection created');
             router.reload();
-        });
+        } };
+        if (editId) put(`/settings/provider/${editId}`, options);
+        else post('/settings/provider', options);
     };
 
     const handleTest = async (conn: any) => {
         setTesting(conn.id);
         try {
-            const res = await fetch(`/settings/provider/${conn.id}/test`, { method: 'POST' });
+            const res = await apiFetch(`/settings/provider/${conn.id}/test`, { method: 'POST' });
             const data = await res.json();
             setTestResult(prev => ({ ...prev, [conn.id]: data }));
             toast(data.success ? 'Connection successful' : 'Connection failed', {

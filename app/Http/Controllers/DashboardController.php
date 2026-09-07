@@ -42,8 +42,8 @@ class DashboardController extends Controller
             'providerConnected' => $providerConnected,
             'providerName' => $provider->getProviderName(),
             'providerStats' => $providerStats,
-            'integrityScore' => $this->integrityService->getIntegrityScore(),
-            'healthScore' => $this->integrityService->getForensicHealthScore(),
+            'recentTransactions' => \App\Models\BlockchainTransaction::latest()->limit(10)->get(),
+            'recentActivity' => \App\Models\ActivityLog::with('user')->latest()->limit(10)->get(),
             'blockchainMode' => $this->integrityService->getBlockchainMode(),
         ]);
     }

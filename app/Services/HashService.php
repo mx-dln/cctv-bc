@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\GeneratedLog;
 use App\Models\HashRecord;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class HashService
 {
@@ -85,8 +86,8 @@ class HashService
 
         return [
             'differences' => $differences,
-            'original_hash' => $result['original_hash'],
-            'current_hash' => $result['current_hash'],
+            'original_hash' => $result['original_hash'] ?? null,
+            'current_hash' => $result['current_hash'] ?? null,
         ];
     }
 
@@ -129,11 +130,33 @@ class HashService
             'started_at' => $log->started_at?->toIso8601String(),
             'ended_at' => $log->ended_at?->toIso8601String(),
             'duration' => $log->duration,
+            'filename' => $log->filename,
+            'resolution' => $log->resolution,
             'score' => $log->score,
             'snapshot_url' => $log->snapshot_url,
             'recording_url' => $log->recording_url,
+            'recording_info' => $log->recording_info,
+            'metadata' => $log->metadata,
             'zones' => $log->zones,
+            'footage_sha256' => $this->hashFootage($log),
+            'registered_by' => $log->registered_by,
+            'registered_at' => $log->registered_at?->toIso8601String(),
         ];
+    }
+
+    private function hashFootage(GeneratedLog $log): ?string
+    {
+        if (!$log->recording_url || str_starts_with($log->recording_url, 'http')) {
+            return null;
+        }
+
+        $storage = app(FootageStorage::class);
+        $disk = $storage->disk($log->recording_url);
+        if (!$storage->exists($log->recording_url)) {
+            return null;
+        }
+
+        return hash_file('sha256', $disk->path($log->recording_url));
     }
 
     private function computeHash(array $data): string

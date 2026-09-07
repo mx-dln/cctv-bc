@@ -104,17 +104,7 @@ export default function Register({ passwordRules }: Props) {
                         <div className="text-center text-sm text-muted-foreground">
                             Already have an account?{' '}
                             <TextLink
-                                href={
-                                    teamInvitation
-                                        ? login.url({
-                                              query: {
-                                                  invitation:
-                                                      teamInvitation.code,
-                                              },
-                                          })
-                                        : login()
-                                }
-                                data-test="team-invitation-login-link"
+                                href={login()}
                                 tabIndex={6}
                             >
                                 Log in

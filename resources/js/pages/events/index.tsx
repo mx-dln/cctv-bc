@@ -100,7 +100,7 @@ export default function EventIndex({ logs, providerConnected, providerName }: { 
                                             <td className="py-3 text-gray-300">{log.camera?.name || '-'}</td>
                                             <td className="py-3 text-gray-400">{log.started_at ? new Date(log.started_at).toLocaleString() : '-'}</td>
                                             <td className="py-3">
-                                                <Badge variant="outline" className={`${labelColors[log.label?.toLowerCase()] || 'border-gray-500 text-gray-300'}`}>
+                                                <Badge variant="outline" className={`${labelColors[log.label?.toLowerCase() ?? ''] || 'border-gray-500 text-gray-300'}`}>
                                                     {log.label || log.event_type}
                                                 </Badge>
                                             </td>

@@ -35,14 +35,14 @@ class AuditController extends Controller
 
     public function logs(Request $request): Response
     {
-        $query = GeneratedLog::with(['camera', 'hashRecords', 'blockchainTransactions']);
+        $query = GeneratedLog::with(['camera', 'hashRecord.blockchainTransaction', 'registeredBy']);
 
         if ($request->filled('date_from')) {
-            $query->where('recorded_at', '>=', $request->date_from);
+            $query->whereDate('started_at', '>=', $request->date_from);
         }
 
         if ($request->filled('date_to')) {
-            $query->where('recorded_at', '<=', $request->date_to);
+            $query->whereDate('started_at', '<=', $request->date_to);
         }
 
         if ($request->filled('camera_id')) {
@@ -101,6 +101,7 @@ class AuditController extends Controller
             return back()->with('error', 'Report file not found.');
         }
 
-        return response()->download(\Storage::path($report->file_path));
+        $this->logger->logReportExport(request()->user(), ['report_id' => $report->report_id, 'result' => 'download']);
+        return \Illuminate\Support\Facades\Storage::download($report->file_path);
     }
 }

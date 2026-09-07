@@ -16,7 +16,7 @@ class AuditService
         $query = GeneratedLog::query()->with(['camera', 'hashRecord', 'hashRecord.blockchainTransaction']);
 
         if (!empty($filters['date_from'])) $query->where('started_at', '>=', $filters['date_from']);
-        if (!empty($filters['date_to'])) $query->where('started_at', '<=', $filters['date_to']);
+        if (!empty($filters['date_to'])) $query->whereDate('started_at', '<=', $filters['date_to']);
         if (!empty($filters['camera_id'])) $query->where('camera_id', $filters['camera_id']);
         if (!empty($filters['status'])) $query->where('status', $filters['status']);
         if (!empty($filters['label'])) $query->where('label', $filters['label']);
@@ -36,6 +36,7 @@ class AuditService
                 'total_logs' => $totalLogs,
                 'verified_count' => $verifiedCount,
                 'tampered_count' => $tamperedCount,
+                'missing_count' => $logs->where('status', 'missing')->count(),
                 'verification_rate' => $totalLogs > 0 ? round(($verifiedCount / $totalLogs) * 100, 2) : 0,
                 'tamper_rate' => $totalLogs > 0 ? round(($tamperedCount / $totalLogs) * 100, 2) : 0,
             ],
@@ -70,7 +71,8 @@ class AuditService
     private function exportExcel(AuditReport $report, $logs): void
     {
         $filename = "audit_report_{$report->report_id}.xlsx";
-        $path = storage_path("app/reports/{$filename}");
+        Storage::makeDirectory('reports');
+        $path = Storage::path("reports/{$filename}");
 
         $writer = SimpleExcelWriter::create($path);
         $writer->addRow(['Event ID', 'Camera', 'Timestamp', 'Event Type', 'Label', 'Duration (s)', 'Score', 'Status', 'Hash']);

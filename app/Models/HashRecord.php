@@ -31,6 +31,6 @@ class HashRecord extends Model
 
     public function blockchainTransaction(): HasOne
     {
-        return $this->hasOne(BlockchainTransaction::class, 'log_id', 'log_id');
+        return $this->hasOne(BlockchainTransaction::class, 'log_id', 'log_id')->latestOfMany();
     }
 }

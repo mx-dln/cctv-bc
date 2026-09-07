@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class ProviderConnection extends Model
 {
+    protected $hidden = ['password', 'api_key'];
     protected $fillable = [
         'name', 'provider_type', 'base_url', 'host', 'port',
         'username', 'password', 'api_key', 'onvif_url', 'rtsp_url',

@@ -21,6 +21,10 @@ class EvidenceCustodyService
         ?string $remarks = null,
         array $metadata = []
     ): EvidenceRecord {
+        app(ActivityLoggerService::class)->log($action, 'custody', $user, $remarks,
+            ['record_id' => $event->record_id, 'event_id' => $event->event_id,
+                'transaction_id' => $event->hashRecord?->blockchainTransaction?->transaction_id,
+                'result' => $metadata['verification_result']['status'] ?? 'success']);
         return EvidenceRecord::create([
             'event_id' => $event->id,
             'user_id' => $user?->id,

@@ -40,15 +40,15 @@ class ForensicController extends Controller
 
         app(\App\Services\EvidenceCustodyService::class)->recordInvestigated($log, $request->user(), 'Forensic analysis performed');
 
-        $hashVerification = $this->hashService->verifyHash($log);
-        $blockchainResult = $this->blockchainService->verifyHash(
-            $log->event_id,
-            $hashVerification['current_hash'] ?? ''
-        );
-        $tamperDetails = $this->hashService->extractTamperDetails($log);
+        $verification = app(\App\Services\VerificationService::class)->verify($log);
+        $hashVerification = $verification['local_verification'] ?? ['status' => $verification['status'], 'verified' => false];
+        $blockchainResult = $verification['blockchain_verification'] ?? ['verified' => false, 'available' => false];
+        $tamperDetails = $verification['tamper_details'] ?? [];
+        app(\App\Services\EvidenceCustodyService::class)->recordVerified($log, $request->user(), $verification);
 
         return response()->json([
             'log' => $log,
+            'status' => $verification['status'],
             'hash_verification' => $hashVerification,
             'blockchain_verification' => $blockchainResult,
             'tamper_details' => $tamperDetails,

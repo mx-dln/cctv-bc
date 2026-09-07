@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('blockchain_transactions', function (Blueprint $table) {
             $table->id();
-            $table->morphs('blockchainable');
+            $table->morphs('blockchainable', 'blockchainable_idx');
             $table->string('transaction_id')->unique();
             $table->string('channel_name')->default('cctv-channel');
             $table->string('chaincode_name')->default('cctv-chaincode');

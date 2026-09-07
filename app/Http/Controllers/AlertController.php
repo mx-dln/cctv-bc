@@ -33,6 +33,9 @@ class AlertController extends Controller
         if ($request->filled('status') && $request->status === 'unresolved') {
             $query->whereNull('resolved_at');
         }
+        if ($request->input('status') === 'resolved') {
+            $query->whereNotNull('resolved_at');
+        }
 
         $alerts = $query->latest()->paginate(20);
 

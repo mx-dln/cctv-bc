@@ -18,6 +18,9 @@ export interface Camera {
 
 export interface GeneratedLog {
     id: number;
+    record_id: string | null;
+    filename: string | null;
+    registered_by: User | null;
     event_id: string;
     camera_id: number;
     camera: Camera;
@@ -35,7 +38,7 @@ export interface GeneratedLog {
     recording_url: string | null;
     zones: string[] | null;
     thumbnail: string | null;
-    status: 'pending' | 'verified' | 'tampered';
+    status: 'pending' | 'registered' | 'verified' | 'tampered' | 'missing';
     hash_record: HashRecord | null;
     blockchain_transactions: BlockchainTransaction[];
     created_at: string;

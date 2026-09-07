@@ -1,3 +1,4 @@
+import { apiFetch } from '@/lib/api-fetch';
 import { Head, router } from '@inertiajs/react';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
@@ -23,7 +24,7 @@ export default function VerificationIndex({ logs }: { logs: { data: GeneratedLog
     const handleVerify = async (log: GeneratedLog) => {
         setVerifying(log.id);
         try {
-            const res = await fetch(`/verification/${log.id}/check`, { method: 'POST' });
+            const res = await apiFetch(`/verification/${log.id}/check`, { method: 'POST' });
             const data = await res.json();
             setResults(prev => ({ ...prev, [log.id]: data }));
             toast(data.status === 'verified' ? 'Log verified successfully' : 'Tampering detected!', {
@@ -159,7 +160,7 @@ export default function VerificationIndex({ logs }: { logs: { data: GeneratedLog
                                                         </p>
                                                         <p className="mt-1 text-sm text-gray-400">
                                                             Local: {result.local_verification?.status} |
-                                                            Blockchain: {result.blockchain_verification?.verified ? 'Verified' : 'Mismatch'}
+                                                            Blockchain: {!result.blockchain_verification || result.blockchain_verification.available === false ? 'Unavailable' : result.blockchain_verification.verified ? 'Verified' : 'Mismatch'}
                                                         </p>
                                                         {result.tamper_details?.differences && Object.keys(result.tamper_details.differences).length > 0 && (
                                                             <div className="mt-2">

@@ -10,7 +10,6 @@ import {
     FileText,
     Settings,
     Activity,
-    Siren,
 } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
@@ -25,11 +24,12 @@ import type { NavItem } from '@/types';
 
 export function AppSidebar() {
     const page = usePage();
-    const teamSlug = (page.props as any).currentTeam?.slug;
+    const permissions = (page.props.auth as any).permissions ?? [];
 
     const mainNavItems: NavItem[] = [
         { title: 'Dashboard', href: `/dashboard`, icon: LayoutGrid },
         { title: 'Cameras', href: `/cameras`, icon: Camera },
+        { title: 'CCTV Register', href: `/custody-records`, icon: Cctv },
         { title: 'CCTV Events', href: `/events`, icon: Cctv },
         { title: 'Verification', href: `/verification`, icon: ShieldCheck },
         { title: 'Blockchain', href: `/blockchain`, icon: Blocks },
@@ -40,11 +40,12 @@ export function AppSidebar() {
         { title: 'Settings', href: `/settings/chain-of-custody`, icon: Settings },
     ];
 
-    const forensicNavItems: NavItem[] = [
-        { title: 'Forensic Dashboard', href: `/forensic/dashboard`, icon: SearchCheck },
-        { title: 'Evidence Timeline', href: `/forensic/timeline`, icon: Activity },
-        { title: 'Executive Overview', href: `/forensic/defense`, icon: ShieldCheck },
-    ];
+    const access: Record<string, string> = {
+        '/dashboard': 'view-dashboard', '/cameras': 'view-cameras', '/custody-records': 'view-verification',
+        '/events': 'view-verification', '/verification': 'view-verification', '/blockchain': 'view-blockchain',
+        '/forensic': 'view-forensic', '/alerts': 'view-alerts', '/activity-logs': 'view-activity-logs',
+        '/audit': 'view-audit', '/settings/chain-of-custody': 'manage-settings',
+    };
 
     return (
         <Sidebar collapsible="icon" variant="inset">
@@ -54,7 +55,7 @@ export function AppSidebar() {
                 </Link>
             </SidebarHeader>
             <SidebarContent>
-                <NavMain items={mainNavItems} />
+                <NavMain items={mainNavItems.filter(item => permissions.includes(access[String(item.href)]))} />
             </SidebarContent>
             <SidebarFooter>
                 <NavUser />

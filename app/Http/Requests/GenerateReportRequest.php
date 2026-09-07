@@ -16,11 +16,11 @@ class GenerateReportRequest extends FormRequest
         return [
             'title' => 'required|string|max:255',
             'type' => 'nullable|string|in:verification,tamper_check,general',
-            'format' => 'nullable|string|in:pdf,excel,print',
+            'format' => 'nullable|string|in:pdf,excel',
             'date_from' => 'nullable|date',
             'date_to' => 'nullable|date|after_or_equal:date_from',
             'camera_id' => 'nullable|exists:cameras,id',
-            'status' => 'nullable|in:verified,tampered,pending',
+            'status' => 'nullable|in:verified,tampered,pending,registered,missing',
             'operator' => 'nullable|string|max:255',
         ];
     }

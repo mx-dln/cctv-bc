@@ -19,7 +19,7 @@ class BlockchainService
         $this->peerEndpoint = config('chainofcustody.blockchain.peer_endpoint', 'localhost:7051');
         $this->channelName = config('chainofcustody.blockchain.channel_name', 'cctv-channel');
         $this->chaincodeName = config('chainofcustody.blockchain.chaincode_name', 'cctv-chaincode');
-        $this->simulateMode = config('chainofcustody.blockchain.simulate', !$this->isAvailable());
+        $this->simulateMode = (bool) config('chainofcustody.blockchain.simulate', false);
     }
 
     public function commitHash(GeneratedLog $log, string $hash): BlockchainTransaction
@@ -32,7 +32,6 @@ class BlockchainService
         ]);
 
         if ($this->simulateMode) {
-            sleep(0.1);
             $blockNumber = (string) rand(100000, 999999);
             $tx->update([
                 'status' => 'committed',
@@ -41,6 +40,7 @@ class BlockchainService
                     'block_number' => $blockNumber,
                     'transaction_id' => $tx->transaction_id,
                     'simulated' => true,
+                    'hash' => $hash,
                 ],
                 'committed_at' => now(),
             ]);
@@ -48,23 +48,35 @@ class BlockchainService
         } else {
             try {
                 $response = $this->submitTransaction('CommitCCTVCustodyLog', [
+                    'record_id' => $log->record_id,
                     'event_id' => $log->event_id,
                     'camera_id' => $log->camera->provider_camera_id ?? $log->camera_id,
                     'timestamp' => $log->started_at?->toIso8601String(),
                     'hash' => $hash,
                     'event_type' => $log->event_type,
+                    'metadata' => $log->metadata ?? [],
+                    'filename' => (string) $log->filename,
+                    'recording_reference' => (string) $log->recording_url,
+                    'registered_at' => $log->registered_at?->toIso8601String(),
+                    'registered_by' => (string) $log->registered_by,
+                    'status' => 'registered',
                 ]);
+
+                if (empty($response['transaction_id']) || ($response['status'] ?? null) !== 'committed') {
+                    throw new \RuntimeException('Gateway did not confirm a committed transaction.');
+                }
 
                 $tx->update([
                     'status' => 'committed',
                     'response' => $response,
+                    'transaction_id' => $response['transaction_id'],
                     'block_number' => $response['block_number'] ?? null,
                     'committed_at' => now(),
                 ]);
             } catch (\Exception $e) {
                 $tx->update([
                     'status' => 'pending',
-                    'error_message' => 'Blockchain network unavailable. Transaction queued for later commit.',
+                    'error_message' => 'Blockchain commit not confirmed. Registration requires a retry.',
                 ]);
                 Log::warning('Blockchain commit failed (queued): ' . $e->getMessage());
             }
@@ -76,11 +88,15 @@ class BlockchainService
     public function verifyHash(string $eventId, string $hash): array
     {
         if ($this->simulateMode) {
+            $tx = BlockchainTransaction::whereHas('log', fn ($query) => $query->where('event_id', $eventId))
+                ->where('status', 'committed')->latest('id')->first();
+            $original = $tx?->response['hash'] ?? null;
             return [
-                'verified' => true,
-                'blockchain_hash' => $hash,
-                'block_number' => (string) rand(100000, 999999),
-                'transaction_id' => 'SIM-' . strtoupper(substr($eventId, 0, 16)),
+                'verified' => is_string($original) && hash_equals($original, $hash),
+                'available' => is_string($original),
+                'blockchain_hash' => $original,
+                'block_number' => $tx?->block_number,
+                'transaction_id' => $tx?->transaction_id,
                 'simulated' => true,
             ];
         }
@@ -91,6 +107,7 @@ class BlockchainService
             if (isset($response['hash']) && $response['hash'] === $hash) {
                 return [
                     'verified' => true,
+                    'available' => true,
                     'blockchain_hash' => $response['hash'],
                     'block_number' => $response['block_number'] ?? null,
                     'transaction_id' => $response['transaction_id'] ?? null,
@@ -100,6 +117,7 @@ class BlockchainService
             return [
                 'verified' => false,
                 'blockchain_hash' => $response['hash'] ?? null,
+                'available' => isset($response['hash']),
                 'message' => 'Hash mismatch or event not found on blockchain.',
             ];
         } catch (\Exception $e) {
@@ -107,6 +125,7 @@ class BlockchainService
             return [
                 'verified' => false,
                 'blockchain_hash' => null,
+                'available' => false,
                 'message' => 'Blockchain unavailable: ' . $e->getMessage(),
             ];
         }

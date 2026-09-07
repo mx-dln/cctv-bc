@@ -83,10 +83,10 @@ class ProviderConnectionController extends Controller
         }
 
         // Don't overwrite password/api_key with masked values
-        if (str_starts_with($validated['password'] ?? '', '***')) {
+        if (empty($validated['password']) || str_starts_with($validated['password'], '***')) {
             unset($validated['password']);
         }
-        if (str_starts_with($validated['api_key'] ?? '', '***')) {
+        if (empty($validated['api_key']) || str_starts_with($validated['api_key'], '***')) {
             unset($validated['api_key']);
         }
 

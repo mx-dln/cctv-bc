@@ -1,3 +1,4 @@
+import { apiFetch } from '@/lib/api-fetch';
 import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
 import { Search, Filter, FileText, Download, CheckCircle2, XCircle, Clock } from 'lucide-react';
@@ -31,7 +32,7 @@ export default function AuditLogs({ logs, cameras, filters }: {
     };
 
     const exportReport = async () => {
-        const res = await fetch('/audit/generate-report', {
+        const res = await apiFetch('/audit/generate-report', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -47,7 +48,7 @@ export default function AuditLogs({ logs, cameras, filters }: {
         });
         const data = await res.json();
         if (data.success) {
-            router.visit(`/audit/reports/${data.report.id}/download`);
+            window.location.assign(`/audit/reports/${data.report.id}/download`);
         }
     };
 
@@ -79,12 +80,12 @@ export default function AuditLogs({ logs, cameras, filters }: {
                             </div>
                             <div className="space-y-2">
                                 <Label className="text-gray-400">Status</Label>
-                                <Select value={status} onValueChange={setStatus}>
+                                <Select value={status || 'all'} onValueChange={value => setStatus(value === 'all' ? '' : value)}>
                                     <SelectTrigger className="w-full border-white/10 bg-white/5 text-white">
                                         <SelectValue placeholder="All statuses" />
                                     </SelectTrigger>
                                     <SelectContent position="popper" className="w-[--radix-select-trigger-width] border-white/10 bg-gray-900 text-white">
-                                        <SelectItem value="">All</SelectItem>
+                                        <SelectItem value="all">All</SelectItem>
                                         <SelectItem value="verified">Verified</SelectItem>
                                         <SelectItem value="tampered">Tampered</SelectItem>
                                         <SelectItem value="pending">Pending</SelectItem>
@@ -93,12 +94,12 @@ export default function AuditLogs({ logs, cameras, filters }: {
                             </div>
                             <div className="space-y-2">
                                 <Label className="text-gray-400">Camera</Label>
-                                <Select value={cameraId} onValueChange={setCameraId}>
+                                <Select value={cameraId || 'all'} onValueChange={value => setCameraId(value === 'all' ? '' : value)}>
                                     <SelectTrigger className="w-full border-white/10 bg-white/5 text-white">
                                         <SelectValue placeholder="All cameras" />
                                     </SelectTrigger>
                                     <SelectContent position="popper" className="w-[--radix-select-trigger-width] border-white/10 bg-gray-900 text-white">
-                                        <SelectItem value="">All</SelectItem>
+                                        <SelectItem value="all">All</SelectItem>
                                         {cameras.map(cam => (
                                             <SelectItem key={cam.id} value={String(cam.id)}>{cam.name}</SelectItem>
                                         ))}
@@ -141,15 +142,15 @@ export default function AuditLogs({ logs, cameras, filters }: {
                                 <tbody>
                                     {logs.data.map((log) => (
                                         <tr key={log.id} className="border-b border-white/5 text-sm transition-colors hover:bg-white/5">
-                                            <td className="py-3 font-mono text-xs text-[#AD9334]">{log.log_id}</td>
+                                            <td className="py-3 font-mono text-xs text-[#AD9334]">{log.record_id ?? log.event_id}</td>
                                             <td className="py-3 text-gray-300">{log.camera?.name || '-'}</td>
-                                            <td className="py-3 text-gray-400">{new Date(log.recorded_at).toLocaleString()}</td>
+                                            <td className="py-3 text-gray-400">{new Date(log.started_at ?? log.created_at).toLocaleString()}</td>
                                             <td className="py-3">
                                                 <Badge variant="outline" className="border-gray-500 text-gray-300">
                                                     {log.event_type.replace(/_/g, ' ')}
                                                 </Badge>
                                             </td>
-                                            <td className="py-3 text-gray-400">{log.operator || '-'}</td>
+                                            <td className="py-3 text-gray-400">{log.registered_by?.name || '-'}</td>
                                             <td className="py-3">
                                                 <Badge variant="outline" className={`flex w-fit items-center gap-1 ${
                                                     log.status === 'verified' ? 'border-green-500 text-green-400' :

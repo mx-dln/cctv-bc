@@ -45,7 +45,14 @@ return new class extends Migration
             $table->text('recording_url')->nullable();
             $table->json('zones')->nullable();
             $table->text('thumbnail')->nullable();
-            $table->enum('status', ['pending', 'verified', 'tampered'])->default('pending');
+            $table->string('record_id')->nullable()->unique();
+            $table->string('filename')->nullable();
+            $table->string('resolution')->nullable();
+            $table->text('recording_info')->nullable();
+            $table->json('metadata')->nullable();
+            $table->enum('status', ['pending', 'registered', 'verified', 'tampered', 'missing'])->default('pending');
+            $table->foreignId('registered_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->timestamp('registered_at')->nullable();
             $table->timestamps();
         });
 

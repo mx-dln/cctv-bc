@@ -7,6 +7,7 @@ use App\Services\ActivityLoggerService;
 use App\Services\EvidenceCustodyService;
 use App\Services\VerificationService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -37,7 +38,7 @@ class VerificationController extends Controller
         ]);
     }
 
-    public function verify(GeneratedLog $log): JsonResponse
+    public function verify(GeneratedLog $log): JsonResponse|RedirectResponse
     {
         $result = $this->verificationService->verify($log);
 
@@ -48,12 +49,19 @@ class VerificationController extends Controller
             ['event_id' => $log->event_id, 'status' => $result['status']]
         );
 
-        return response()->json($result);
+        if (request()->expectsJson()) {
+            return response()->json($result);
+        }
+
+        $message = $result['message'] ?? ('Verification result: ' . $result['status']);
+
+        return back()->with('success', $message);
     }
 
     public function show(GeneratedLog $log): Response
     {
         $log->load(['camera', 'hashRecord', 'hashRecord.blockchainTransaction']);
+        $this->custody->recordViewed($log, request()->user());
 
         return Inertia::render('verification/show', [
             'log' => $log,
