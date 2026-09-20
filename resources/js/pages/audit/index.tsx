@@ -48,7 +48,7 @@ export default function AuditIndex({ reports }: { reports: { data: AuditReport[]
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="text-2xl font-bold text-white">Audit Reports</h1>
-                        <p className="text-sm text-gray-400">Generate and download forensic audit reports</p>
+                        <p className="text-sm text-gray-400">Generate and download chain-of-custody audit reports</p>
                     </div>
                     <div className="flex gap-2">
                         <Button onClick={() => handleGenerate('pdf')} disabled={generating} className="bg-gradient-to-r from-[#AD9334] to-[#C2A74A] text-white hover:from-[#C2A74A] hover:to-[#AD9334]">

@@ -138,7 +138,7 @@ class CustodyWorkflowTest extends TestCase
         $this->actingAs($user)->post('/custody-records', [])->assertForbidden();
         $this->get('/settings/provider')->assertForbidden();
         $this->get('/audit/logs?date_from=2026-01-01')->assertOk();
-        $this->get('/forensic/timeline')->assertOk();
+        $this->get('/forensic/timeline')->assertNotFound();
         $this->get('/blockchain')->assertOk();
         $this->get('/custody-records')->assertOk();
     }

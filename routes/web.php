@@ -1,15 +1,11 @@
 <?php
 
-use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\AlertController;
 use App\Http\Controllers\AuditController;
 use App\Http\Controllers\BlockchainController;
 use App\Http\Controllers\CameraController;
-use App\Http\Controllers\CctvEventController;
 use App\Http\Controllers\CctvRecordController;
-use App\Http\Controllers\CustodyController;
 use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\ForensicController;
 use App\Http\Controllers\ProviderConnectionController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\VerificationController;
@@ -27,11 +23,6 @@ Route::middleware(['auth', 'verified', \App\Http\Middleware\AuthorizeCustodyAcce
         Route::post('/', [CctvRecordController::class, 'store'])->name('custody.records.store');
         Route::post('/{log}/retry-commit', [CctvRecordController::class, 'retryCommit'])->name('custody.records.retry-commit');
         Route::get('/{log}/download', [CctvRecordController::class, 'download'])->name('custody.records.download');
-    });
-
-    Route::prefix('events')->group(function () {
-        Route::get('/', [CctvEventController::class, 'index'])->name('events.index');
-        Route::get('/{log}', [CctvEventController::class, 'show'])->name('events.show');
     });
 
     Route::prefix('verification')->group(function () {
@@ -52,21 +43,11 @@ Route::middleware(['auth', 'verified', \App\Http\Middleware\AuthorizeCustodyAcce
         Route::get('/reports/{report}/download', [AuditController::class, 'downloadReport'])->name('audit.reports.download');
     });
 
-    Route::prefix('forensic')->group(function () {
-        Route::get('/', [ForensicController::class, 'index'])->name('forensic.index');
-        Route::post('/analyze', [ForensicController::class, 'analyze'])->name('forensic.analyze');
-        Route::get('/timeline', [CustodyController::class, 'timeline'])->name('forensic.timeline');
-    });
-
     Route::prefix('alerts')->group(function () {
         Route::get('/', [AlertController::class, 'index'])->name('alerts.index');
         Route::post('/{alert}/resolve', [AlertController::class, 'resolve'])->name('alerts.resolve');
         Route::post('/{alert}/dismiss', [AlertController::class, 'dismiss'])->name('alerts.dismiss');
         Route::get('/unread-count', [AlertController::class, 'unreadCount'])->name('alerts.unread-count');
-    });
-
-    Route::prefix('activity-logs')->group(function () {
-        Route::get('/', [ActivityLogController::class, 'index'])->name('activity-logs.index');
     });
 
     Route::prefix('settings')->group(function () {

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ProviderConnection;
 use App\Services\Cctv\CctvProviderFactory;
+use App\Models\Camera;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -132,6 +133,8 @@ class ProviderConnectionController extends Controller
     {
         ProviderConnection::where('is_active', true)->update(['is_active' => false]);
         $connection->update(['is_active' => true]);
+        $this->syncCameras($connection);
+
         return redirect()->route('settings.provider')->with('success', 'Provider activated.');
     }
 
@@ -139,5 +142,31 @@ class ProviderConnectionController extends Controller
     {
         $connection->update(['is_active' => false]);
         return redirect()->route('settings.provider')->with('success', 'Provider deactivated.');
+    }
+
+    private function syncCameras(ProviderConnection $connection): void
+    {
+        $provider = $this->factory->resolve($connection->provider_type);
+        $provider->connect($connection->toConfig());
+
+        if (!(($provider->verifyConnection()['connected'] ?? false))) {
+            return;
+        }
+
+        foreach ($provider->getCameras() as $cameraData) {
+            Camera::updateOrCreate(
+                [
+                    'provider' => $provider->getProviderName(),
+                    'provider_camera_id' => $cameraData['provider_camera_id'],
+                ],
+                [
+                    'name' => $cameraData['name'],
+                    'location' => $cameraData['location'] ?? null,
+                    'status' => $cameraData['status'] ?? 'online',
+                    'resolution' => $cameraData['resolution'] ?? null,
+                    'fps' => $cameraData['fps'] ?? null,
+                ]
+            );
+        }
     }
 }

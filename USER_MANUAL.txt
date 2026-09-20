@@ -1,0 +1,162 @@
+CCTV Blockchain Chain-of-Custody User Manual
+============================================
+
+Implemented study flow
+----------------------
+
+The system follows this flow:
+
+Camera -> DVR/NVR -> Local/Private Storage -> SHA-256 Hash -> Hyperledger Fabric
+
+Important note:
+The video file itself is stored in local/private storage. Hyperledger Fabric stores the custody proof: record ID, footage hash, metadata hash, final SHA-256 hash, timestamp, camera reference, and accountable user details.
+
+
+Main pages
+----------
+
+1. Dashboard
+
+Use this as the control panel.
+
+You can see:
+- total evidence records
+- Fabric commits
+- pending verification
+- alerts
+- evidence flow
+- recent evidence
+- latest Fabric proofs
+- recent audit trail
+
+Use the buttons:
+- Register Evidence: opens the evidence registration page.
+- Verify Evidence: opens the verification page.
+
+
+2. Cameras
+
+Use this page to check if the DVR/NVR provider is connected.
+
+For capstone/demo mode, use Mock Provider. It creates demo DVR/NVR channels such as Main Entrance, Lobby, Parking Lot, Server Room, Vault Door, and ATM Area.
+
+If the camera list looks empty:
+
+php artisan cctv:discover-cameras
+
+
+3. Evidence Register
+
+Use this page to register CCTV footage into the chain-of-custody system.
+
+Steps:
+
+1. Select a camera.
+2. Upload the CCTV video file.
+3. Fill in filename, resolution, date/time, duration, and recording notes.
+4. Leave "Already stored footage path" empty when uploading a new file.
+5. Click Register, Hash, and Commit.
+6. Wait for Fabric status to become committed.
+
+What happens internally:
+
+1. Laravel saves the footage in private local storage.
+2. The system computes SHA-256 for the footage.
+3. The system computes SHA-256 for the custody metadata.
+4. The combined custody hash is committed to Hyperledger Fabric.
+5. The local database stores the record and Fabric transaction ID.
+
+
+4. Evidence Verification
+
+Use this page to check if footage still matches the original chain-of-custody proof.
+
+Steps:
+
+1. Open Evidence Verification.
+2. Select or upload the evidence file to verify.
+3. Click Verify.
+4. The system compares the current SHA-256 hash with the local record and the Hyperledger Fabric record.
+
+Results:
+
+- Verified: file and metadata match the Fabric proof.
+- Tampered: hash mismatch detected.
+- Missing: local/private footage is unavailable.
+- Unavailable: Fabric gateway or proof is not reachable.
+
+
+5. Fabric Ledger
+
+Use this page to view blockchain commit records.
+
+A real Fabric transaction ID is a long hexadecimal string. If you see old TX-... style IDs, those were old demo/simulation records.
+
+
+6. Alerts
+
+Use this page to view discrepancy or integrity warnings.
+
+
+7. Audit Reports
+
+Use this page to generate chain-of-custody reports.
+
+
+8. Settings
+
+Use this page to configure:
+- CCTV provider
+- Mock Provider for demo/capstone testing
+- Dahua DVR/NVR if using a real DVR/NVR
+- user/security settings
+
+
+Recommended demo workflow
+-------------------------
+
+1. Start Docker Desktop.
+2. Start Hyperledger Fabric in Ubuntu WSL.
+3. Start the Node Fabric gateway.
+4. Open Laravel/Herd at https://cctv-bc.test.
+5. Login as admin.
+6. Go to Settings and activate Mock Provider if needed.
+7. Run php artisan cctv:discover-cameras if cameras are empty.
+8. Go to Evidence Register.
+9. Upload a sample MP4.
+10. Click Register, Hash, and Commit.
+11. Confirm Fabric shows committed.
+12. Go to Evidence Verification.
+13. Verify the same evidence.
+14. Show the Fabric Ledger and Audit Reports.
+
+
+Admin login
+-----------
+
+Email: admin@ficobank.com
+Password: password
+
+
+Troubleshooting
+---------------
+
+If Fabric shows pending:
+- Check Docker Desktop is running.
+- Check WSL Fabric containers are running.
+- Check the Node gateway is running.
+- Run curl.exe http://127.0.0.1:8787/health.
+
+If verification says unavailable:
+- Check the gateway health endpoint.
+- Make sure BLOCKCHAIN_SIMULATE=false.
+- Make sure the record was committed to Fabric.
+
+If cameras are empty:
+- Activate Mock Provider in Settings.
+- Run php artisan cctv:discover-cameras.
+
+If upload fails:
+- Use a smaller MP4 for testing.
+- Restart PHP/Herd after upload limit changes.
+- Check .user.ini and PHP upload limits.

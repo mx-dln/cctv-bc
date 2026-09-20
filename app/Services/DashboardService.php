@@ -27,8 +27,8 @@ class DashboardService
             'blockchain_transactions' => BlockchainTransaction::count(),
             'successful_transactions' => BlockchainTransaction::where('status', 'committed')->count(),
             'failed_transactions' => BlockchainTransaction::where('status', 'failed')->count(),
-            'active_alerts' => Alert::where('is_read', false)->count(),
-            'critical_alerts' => Alert::where('is_read', false)->where('severity', 'critical')->count(),
+            'active_alerts' => Alert::whereNull('resolved_at')->count(),
+            'critical_alerts' => Alert::whereNull('resolved_at')->where('severity', 'critical')->count(),
         ];
     }
 
@@ -102,8 +102,7 @@ class DashboardService
 
     public function getRecentAlerts(int $limit = 5): array
     {
-        return Alert::where('is_read', false)
-            ->latest()
+        return Alert::latest()
             ->take($limit)
             ->get()
             ->toArray();

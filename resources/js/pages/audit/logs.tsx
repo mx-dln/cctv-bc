@@ -59,7 +59,7 @@ export default function AuditLogs({ logs, cameras, filters }: {
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="text-2xl font-bold text-white">Audit Logs</h1>
-                        <p className="text-sm text-gray-400">Search and filter CCTV logs for forensic audit</p>
+                        <p className="text-sm text-gray-400">Search and filter chain-of-custody activity logs</p>
                     </div>
                     <Button onClick={exportReport} className="bg-gradient-to-r from-[#AD9334] to-[#C2A74A] text-white hover:from-[#C2A74A] hover:to-[#AD9334]">
                         <Download className="mr-2 h-4 w-4" /> Export Report

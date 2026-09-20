@@ -26,11 +26,6 @@ class CctvRecordController extends Controller
                 }))
                 ->paginate(20)->withQueryString(),
             'search' => $request->string('search')->toString(),
-            'uploadConfig' => [
-                'maxFileSize' => ini_get('upload_max_filesize'),
-                'postMaxSize' => ini_get('post_max_size'),
-                'memoryLimit' => ini_get('memory_limit'),
-            ],
         ]);
     }
 
@@ -38,7 +33,7 @@ class CctvRecordController extends Controller
     {
         $data = $request->validate([
             'camera_id' => ['required', 'exists:cameras,id'],
-            'footage' => ['nullable', 'file', 'mimetypes:video/mp4,video/avi,video/mpeg,video/quicktime,video/x-msvideo', 'max:1048576'],
+            'footage' => ['nullable', 'file', 'mimetypes:video/mp4,video/avi,video/mpeg,video/quicktime,video/x-msvideo,video/webm', 'max:1048576'],
             'filename' => ['nullable', 'string', 'max:255'],
             'recording_url' => ['nullable', 'string', 'max:2048'],
             'recorded_at' => ['required', 'date'],
@@ -49,7 +44,7 @@ class CctvRecordController extends Controller
             'label' => ['nullable', 'string', 'max:100'],
         ], [
             'footage.max' => 'The CCTV footage must be 1 GB or smaller.',
-            'footage.mimetypes' => 'The CCTV footage must be an MP4, AVI, MPEG, or QuickTime video.',
+            'footage.mimetypes' => 'The CCTV footage must be an MP4, AVI, MPEG, QuickTime, or WebM video.',
             'footage.uploaded' => 'The footage failed to upload. Restart PHP/Herd, then try again. If it still fails, use a file smaller than 1 GB.',
         ]);
 

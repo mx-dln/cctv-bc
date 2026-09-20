@@ -15,13 +15,10 @@ class AuthorizeCustodyAccess
             'dashboard' => 'view-dashboard',
             'cameras' => $write || in_array($request->segment(2), ['create']) || $request->segment(3) === 'edit' ? 'manage-cameras' : 'view-cameras',
             'custody-records' => $write ? 'manage-verification' : 'view-verification',
-            'events' => 'view-verification',
             'verification' => $write ? 'manage-verification' : 'view-verification',
             'blockchain' => 'view-blockchain',
             'audit' => $write ? 'manage-audit' : 'view-audit',
-            'forensic' => $write ? 'manage-forensic' : 'view-forensic',
             'alerts' => $write ? 'manage-alerts' : 'view-alerts',
-            'activity-logs' => 'view-activity-logs',
             'settings' => 'manage-settings',
             default => null,
         };

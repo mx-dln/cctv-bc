@@ -48,6 +48,11 @@ class CctvProviderFactory
     public function createMock(): MockProvider
     {
         $provider = app(MockProvider::class);
+        $provider->connect([
+            'name' => 'Development Mock',
+            'provider_type' => 'mock',
+        ]);
+
         return $provider;
     }
 

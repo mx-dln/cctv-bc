@@ -1,0 +1,122 @@
+OpenCode prompt to run the full CCTV Blockchain system
+======================================================
+
+Use this prompt in OpenCode:
+
+Please run and verify the CCTV Blockchain Chain-of-Custody project end to end.
+
+Project folder:
+C:\Users\micha\OneDrive\Documents\Sites\cctv-bc
+
+Expected architecture:
+Camera -> DVR/NVR -> Local/Private Storage -> SHA-256 Hash -> Hyperledger Fabric
+
+Important:
+- The video file must stay in local/private storage.
+- Hyperledger Fabric must store only the custody proof/hash/metadata.
+- Do not switch back to blockchain simulation.
+- Keep BLOCKCHAIN_SIMULATE=false.
+
+Step 1: Verify Docker Desktop is running from Windows PowerShell:
+
+docker --version
+docker compose version
+docker info
+
+Step 2: Start or verify the Fabric network in Ubuntu WSL:
+
+wsl -d Ubuntu -- bash -lc "cd ~/fabric-samples/test-network && docker ps"
+
+If Fabric containers are not running, run:
+
+wsl -d Ubuntu -- bash -lc "cd ~/fabric-samples/test-network && ./network.sh up createChannel -ca"
+
+Expected important containers:
+- peer0.org1.example.com
+- peer0.org2.example.com
+- orderer.example.com
+- ca_org1
+- ca_org2
+- ca_orderer
+
+Step 3: Verify cctv-custody chaincode is deployed:
+
+wsl -d Ubuntu -- bash -lc "cd ~/fabric-samples/test-network && peer lifecycle chaincode querycommitted --channelID mychannel --name cctv-custody"
+
+If the peer command environment is not loaded, redeploy from WSL:
+
+wsl -d Ubuntu -- bash -lc "cd ~/fabric-samples/test-network && CGO_ENABLED=0 ./network.sh deployCC -ccn cctv-custody -ccp ../cctv-chaincode/cctv-custody-go -ccl go -ccv 1.2 -ccs 1"
+
+Step 4: Start the Node Fabric gateway in Windows PowerShell:
+
+cd C:\Users\micha\OneDrive\Documents\Sites\cctv-bc\hyperledger\gateway
+$env:FABRIC_TLS_CERT_PATH="\\wsl.localhost\Ubuntu\home\michael\fabric-samples\test-network\organizations\peerOrganizations\org1.example.com\peers\peer0.org1.example.com\tls\ca.crt"
+$env:FABRIC_CERT_DIRECTORY="\\wsl.localhost\Ubuntu\home\michael\fabric-samples\test-network\organizations\peerOrganizations\org1.example.com\users\Admin@org1.example.com\msp\signcerts"
+$env:FABRIC_KEY_DIRECTORY="\\wsl.localhost\Ubuntu\home\michael\fabric-samples\test-network\organizations\peerOrganizations\org1.example.com\users\Admin@org1.example.com\msp\keystore"
+$env:FABRIC_PEER_ENDPOINT="localhost:7051"
+$env:FABRIC_PEER_HOST_ALIAS="peer0.org1.example.com"
+$env:FABRIC_MSP_ID="Org1MSP"
+$env:FABRIC_CHANNEL="mychannel"
+$env:FABRIC_CHAINCODE="cctv-custody"
+$env:PORT="8787"
+npm start
+
+Step 5: In another PowerShell window, verify gateway health:
+
+curl.exe http://127.0.0.1:8787/health
+
+Expected:
+
+{"available":true,"gateway":"Hyperledger Fabric","channel":"mychannel","chaincode":"cctv-custody"}
+
+Step 6: Verify Laravel config:
+
+cd C:\Users\micha\OneDrive\Documents\Sites\cctv-bc
+php artisan optimize:clear
+php artisan config:clear
+php artisan tinker --execute="dump(config('chainofcustody.blockchain.simulate'), config('chainofcustody.blockchain.peer_endpoint'), config('chainofcustody.blockchain.channel'), config('chainofcustody.blockchain.chaincode'))"
+
+Expected:
+- false
+- 127.0.0.1:8787
+- mychannel
+- cctv-custody
+
+Step 7: Refresh mock DVR/NVR cameras:
+
+php artisan cctv:discover-cameras
+
+Expected:
+Discovered and registered 8 cameras.
+
+Step 8: Run checks:
+
+npm run types:check
+php artisan test --compact
+npm run build
+
+Step 9: Open the app:
+
+https://cctv-bc.test
+
+Login:
+admin@ficobank.com
+password
+
+Step 10: Manual user test:
+
+1. Open Dashboard.
+2. Confirm the flow shows Camera -> DVR/NVR Storage -> SHA-256 Hash -> Fabric Ledger -> Verification.
+3. Open Cameras.
+4. Confirm Mock Provider cameras are visible.
+5. Open Evidence Register.
+6. Upload a small MP4.
+7. Click Register, Hash, and Commit.
+8. Confirm Fabric status becomes committed.
+9. Open Fabric Ledger and confirm a real long transaction ID.
+10. Open Evidence Verification and verify the record.
+
+If anything fails, report:
+- failing command
+- exact error output
+- whether Docker Desktop, WSL Fabric, and Node gateway are running

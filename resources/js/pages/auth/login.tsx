@@ -38,7 +38,7 @@ export default function Login({ status, canResetPassword }: Props) {
                         <div className="mt-6 flex gap-4 text-xs text-gray-500">
                             <span className="flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5 text-[#AD9334]" /> SHA-256 Secured</span>
                             <span className="flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5 text-[#AD9334]" /> Blockchain Verified</span>
-                            <span className="flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5 text-[#AD9334]" /> Forensic Audit</span>
+                            <span className="flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5 text-[#AD9334]" /> Evidence Integrity</span>
                         </div>
                     </div>
                 </div>

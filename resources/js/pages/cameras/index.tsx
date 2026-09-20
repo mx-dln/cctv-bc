@@ -64,7 +64,7 @@ export default function CameraIndex({ cameras, connected, providerName }: { came
                             <div className="flex flex-col items-center justify-center py-12 text-gray-500">
                                 <Cctv className="mb-3 h-12 w-12 text-gray-600" />
                                 <p className="text-lg font-medium">No DVR Connected</p>
-                                <p className="text-sm">Connect to a Dahua DVR or enable Mock Provider in Settings to see cameras</p>
+                                <p className="text-sm">Connect a DVR/NVR provider or enable Mock Provider in Settings to see cameras</p>
                             </div>
                         ) : (
                             <div className="overflow-x-auto">

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ProviderConnection;
 use App\Services\Cctv\CctvProviderManager;
 use App\Services\DashboardService;
 use App\Services\IntegrityScoreService;
@@ -26,8 +27,10 @@ class DashboardController extends Controller
 
     public function __invoke(): Response
     {
-        $provider = $this->cctvManager->provider();
-        $providerConnected = ($provider->verifyConnection())['connected'] ?? false;
+        $hasProviderRecords = ProviderConnection::exists();
+        $hasActiveProvider = ProviderConnection::where('is_active', true)->exists();
+        $provider = $hasProviderRecords && !$hasActiveProvider ? null : $this->cctvManager->provider();
+        $providerConnected = $provider ? (($provider->verifyConnection())['connected'] ?? false) : false;
         $providerStats = $providerConnected ? $provider->getStatus() : [];
 
         return Inertia::render('dashboard', [
@@ -40,7 +43,7 @@ class DashboardController extends Controller
             'recentAlerts' => $this->dashboardService->getRecentAlerts(),
             'cameraStatuses' => $this->dashboardService->getCameraStatuses(),
             'providerConnected' => $providerConnected,
-            'providerName' => $provider->getProviderName(),
+            'providerName' => $provider?->getProviderName() ?? 'No active DVR/NVR provider',
             'providerStats' => $providerStats,
             'recentTransactions' => \App\Models\BlockchainTransaction::latest()->limit(10)->get(),
             'recentActivity' => \App\Models\ActivityLog::with('user')->latest()->limit(10)->get(),

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Camera;
+use App\Models\ProviderConnection;
 use App\Services\Cctv\CctvProviderManager;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -20,6 +21,14 @@ class CameraController extends Controller
 
     public function index(Request $request): Response
     {
+        if (ProviderConnection::exists() && !ProviderConnection::where('is_active', true)->exists()) {
+            return Inertia::render('cameras/index', [
+                'cameras' => [],
+                'connected' => false,
+                'providerName' => 'No active DVR/NVR provider',
+            ]);
+        }
+
         $provider = $this->cctvManager->provider();
         $connectionResult = $provider->verifyConnection();
         $connected = $connectionResult['connected'] ?? false;

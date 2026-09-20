@@ -19,11 +19,8 @@ class RoleAndPermissionSeeder extends Seeder
             'view-blockchain',
             'manage-audit',
             'view-audit',
-            'manage-forensic',
-            'view-forensic',
             'manage-alerts',
             'view-alerts',
-            'view-activity-logs',
             'manage-settings',
             'view-settings',
             'export-reports',
@@ -45,10 +42,8 @@ class RoleAndPermissionSeeder extends Seeder
             'view-verification',
             'view-blockchain',
             'view-audit',
-            'view-forensic',
             'manage-alerts',
             'view-alerts',
-            'view-activity-logs',
         ]);
 
         $auditorRole = Role::create(['name' => 'Auditor']);
@@ -59,10 +54,7 @@ class RoleAndPermissionSeeder extends Seeder
             'view-blockchain',
             'manage-audit',
             'view-audit',
-            'manage-forensic',
-            'view-forensic',
             'view-alerts',
-            'view-activity-logs',
             'export-reports',
         ]);
     }

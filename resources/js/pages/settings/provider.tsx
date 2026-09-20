@@ -105,7 +105,7 @@ export default function ProviderSettings({ connections, availableProviders }: { 
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="text-2xl font-bold text-white">CCTV Provider Configuration</h1>
-                        <p className="text-sm text-gray-400">Configure your Dahua DVR/NVR or use Mock Provider for development</p>
+                        <p className="text-sm text-gray-400">Configure the CCTV DVR/NVR provider or use Mock Provider for development</p>
                     </div>
                     <Button onClick={openCreate} className="bg-gradient-to-r from-[#AD9334] to-[#C2A74A] text-white hover:from-[#C2A74A] hover:to-[#AD9334]">
                         <Plus className="mr-2 h-4 w-4" /> Add Connection
@@ -215,7 +215,7 @@ export default function ProviderSettings({ connections, availableProviders }: { 
                 <DialogContent className="max-w-lg border-white/10 bg-gray-900 text-white">
                     <DialogHeader>
                         <DialogTitle className="text-white">{editId ? 'Edit Connection' : 'New Connection'}</DialogTitle>
-                        <DialogDescription className="text-gray-400">Configure your Dahua DVR/NVR or Mock Provider</DialogDescription>
+                        <DialogDescription className="text-gray-400">Configure a CCTV DVR/NVR or Mock Provider</DialogDescription>
                     </DialogHeader>
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div className="grid gap-4 md:grid-cols-2">
