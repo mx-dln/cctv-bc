@@ -63,6 +63,39 @@ class HashService
         ];
     }
 
+    public function verifyUploadedFootage(GeneratedLog $log, string $filePath): array
+    {
+        $hashRecord = $log->hashRecord;
+
+        if (!$hashRecord) {
+            return [
+                'verified' => false,
+                'status' => 'no_hash',
+                'message' => 'No original hash record found for this evidence.',
+            ];
+        }
+
+        $uploadedFootageHash = hash_file('sha256', $filePath);
+        $comparisonPayload = $this->buildPayload($log, $uploadedFootageHash);
+        $comparisonHash = $this->computeHash($comparisonPayload);
+        $isMatch = hash_equals($hashRecord->hash_value, $comparisonHash);
+
+        return [
+            'verified' => $isMatch,
+            'status' => $isMatch ? 'verified' : 'tampered',
+            'current_hash' => $comparisonHash,
+            'original_hash' => $hashRecord->hash_value,
+            'current_footage_sha256' => $uploadedFootageHash,
+            'original_footage_sha256' => $hashRecord->hashed_payload['footage_sha256'] ?? null,
+            'previous_hash' => $hashRecord->previous_hash,
+            'chain_index' => $hashRecord->hash_chain_index,
+            'original_payload' => $hashRecord->hashed_payload,
+            'current_payload' => $comparisonPayload,
+            'hashed_at' => $hashRecord->created_at,
+            'hash_duration_ms' => $hashRecord->hash_duration_ms,
+        ];
+    }
+
     public function extractTamperDetails(GeneratedLog $log): array
     {
         $result = $this->verifyHash($log);
@@ -120,7 +153,7 @@ class HashService
         ];
     }
 
-    private function buildPayload(GeneratedLog $log): array
+    private function buildPayload(GeneratedLog $log, ?string $footageHashOverride = null): array
     {
         return [
             'event_id' => $log->event_id,
@@ -138,7 +171,7 @@ class HashService
             'recording_info' => $log->recording_info,
             'metadata' => $log->metadata,
             'zones' => $log->zones,
-            'footage_sha256' => $this->hashFootage($log),
+            'footage_sha256' => $footageHashOverride ?? $this->hashFootage($log),
             'registered_by' => $log->registered_by,
             'registered_at' => $log->registered_at?->toIso8601String(),
         ];

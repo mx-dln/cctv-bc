@@ -22,6 +22,7 @@ class GenerateReportRequest extends FormRequest
             'camera_id' => 'nullable|exists:cameras,id',
             'status' => 'nullable|in:verified,tampered,pending,registered,missing',
             'operator' => 'nullable|string|max:255',
+            'search' => 'nullable|string|max:255',
         ];
     }
 }

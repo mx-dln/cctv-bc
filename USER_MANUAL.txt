@@ -6,10 +6,10 @@ Implemented study flow
 
 The system follows this flow:
 
-Camera -> DVR/NVR -> Local/Private Storage -> SHA-256 Hash -> Hyperledger Fabric
+Authorized footage source (uploaded CCTV file, exported DVR/NVR footage, USB camera capture, or controlled footage) -> Local or Private Storage -> SHA-256 Hash -> Hyperledger Fabric -> Verification
 
 Important note:
-The video file itself is stored in local/private storage. Hyperledger Fabric stores the custody proof: record ID, footage hash, metadata hash, final SHA-256 hash, timestamp, camera reference, and accountable user details.
+The system is not a replacement for CCTV cameras, DVR, or NVR, and it does not strictly require a DVR/NVR for prototype testing. It is a blockchain-augmented chain-of-custody layer for authorized footage. The video file itself stays in local/private storage. Hyperledger Fabric stores the custody proof: record ID, footage hash, metadata hash, final SHA-256 hash, timestamp, source/camera reference, transaction ID, and accountable user details.
 
 
 Main pages
@@ -36,9 +36,9 @@ Use the buttons:
 
 2. Cameras
 
-Use this page to check if the DVR/NVR provider is connected.
+Use this page only when checking a connected DVR/NVR or mock camera provider. A DVR/NVR is not required for prototype evidence registration because uploaded CCTV footage, USB camera capture, and controlled footage are supported.
 
-For capstone/demo mode, use Mock Provider. It creates demo DVR/NVR channels such as Main Entrance, Lobby, Parking Lot, Server Room, Vault Door, and ATM Area.
+For capstone/demo mode, you may use Mock Provider to simulate camera channels, or use the Controlled Footage / USB Camera source without a DVR/NVR.
 
 If the camera list looks empty:
 
@@ -74,9 +74,10 @@ Use this page to check if footage still matches the original chain-of-custody pr
 Steps:
 
 1. Open Evidence Verification.
-2. Select or upload the evidence file to verify.
-3. Click Verify.
-4. The system compares the current SHA-256 hash with the local record and the Hyperledger Fabric record.
+2. Click Verify Stored Original to check the stored private footage.
+3. To test possible tampering, choose a questioned or edited video file in the comparison upload field.
+4. Click Compare.
+5. The system computes the SHA-256 hash of the current file and compares it with the original proof recorded in Hyperledger Fabric.
 
 Results:
 
@@ -84,6 +85,9 @@ Results:
 - Tampered: hash mismatch detected.
 - Missing: local/private footage is unavailable.
 - Unavailable: Fabric gateway or proof is not reachable.
+
+Important:
+Do not register an edited/cut video as new evidence when testing tampering. If it is registered as new evidence, it receives its own new hash and can verify as its own original record. For tamper testing, register the original footage once, then upload the edited/cut video only in Evidence Verification as a comparison file.
 
 
 5. Fabric Ledger
@@ -107,8 +111,9 @@ Use this page to generate chain-of-custody reports.
 
 Use this page to configure:
 - CCTV provider
-- Mock Provider for demo/capstone testing
-- Dahua DVR/NVR if using a real DVR/NVR
+- optional Mock Provider for demo/capstone testing
+- optional Dahua DVR/NVR if using a real DVR/NVR
+- controlled footage or USB camera capture when no DVR/NVR is available
 - user/security settings
 
 
@@ -127,8 +132,86 @@ Recommended demo workflow
 10. Click Register, Hash, and Commit.
 11. Confirm Fabric shows committed.
 12. Go to Evidence Verification.
-13. Verify the same evidence.
-14. Show the Fabric Ledger and Audit Reports.
+13. Click Verify Stored Original for the registered evidence.
+14. Upload the same video with a different filename as a comparison file. It should verify because the content hash is the same.
+15. Upload a cut or edited version as a comparison file. It should show tampered because the content hash changed.
+16. Show the Fabric Ledger and Audit Reports.
+
+
+Defense guide
+-------------
+
+Short explanation:
+
+"Ang system namin ay hindi replacement ng CCTV, DVR, or NVR, and hindi rin required ang DVR/NVR for prototype testing. It is a blockchain-augmented chain-of-custody layer for authorized footage. The footage remains in local or private storage, while the system generates SHA-256 hashes and records the integrity proof in Hyperledger Fabric. During verification, the system recomputes the hash and compares it with the blockchain-recorded proof to detect alteration, deletion, or mismatch."
+
+System flow to defend:
+
+Authorized footage source (uploaded CCTV file, exported DVR/NVR footage, USB camera capture, or controlled footage) -> Local or Private Storage -> SHA-256 Hash -> Hyperledger Fabric -> Verification
+
+Explain the process this way:
+
+1. Authorized footage is provided from an uploaded CCTV file, exported DVR/NVR footage, USB camera capture, or controlled source.
+2. Footage is stored locally or privately.
+3. Authorized user registers the footage in the system.
+4. The system generates a SHA-256 hash.
+5. The hash and metadata proof are committed to Hyperledger Fabric.
+6. During verification, the system hashes the current file again.
+7. If hashes match, the evidence is verified.
+8. If hashes do not match, the system flags possible tampering.
+
+If asked: "Bakit hindi video mismo sa blockchain?"
+
+"Hindi practical mag-store ng video sa blockchain because CCTV files are large. Blockchain is best used as an immutable proof layer, not as video storage. The correct design is to store the video securely in private storage and store its SHA-256 hash and metadata proof in Hyperledger Fabric. This still gives tamper detection because any change in the video changes the hash."
+
+If asked: "Need ba talaga DVR/NVR?"
+
+"No. DVR/NVR is not strictly required for the prototype. The system needs authorized footage bytes that can be stored privately, hashed, and verified. A DVR/NVR is one possible source for production, but uploaded CCTV footage, exported footage, USB camera capture, or controlled footage can also be used for capstone testing. The important part is that once footage is registered, it is hashed and its proof is committed to Hyperledger Fabric."
+
+If asked: "Mock DVR lang ba yan?"
+
+"The Mock Provider is optional and only for controlled demonstration and testing. It simulates camera channels so the workflow can be tested without exposing real bank CCTV infrastructure. The system can also use uploaded footage or USB camera capture without a DVR/NVR. In production, the source may be an actual FICOBank DVR/NVR provider or another authorized exported-footage workflow."
+
+If asked: "Ano role ng Hyperledger Fabric?"
+
+"Hyperledger Fabric stores the immutable custody proof. It records the evidence hash, metadata hash, record ID, timestamp, camera reference, and transaction ID. This allows the system to verify later whether the footage still matches the original registered evidence."
+
+If asked: "Paano nadedetect tampering?"
+
+"Through SHA-256 hash comparison. A video file produces a unique hash. If even one small part of the video changes, the generated hash changes. During verification, the system compares the current hash against the original hash recorded in Hyperledger Fabric. If they do not match, the system flags the evidence as altered or tampered."
+
+If asked: "What if unavailable ang verification?"
+
+"That means the local file can be checked or the record exists, but the blockchain proof cannot be reached or the video is missing. The system intentionally separates the results: local verification and blockchain verification. This is useful because it tells the user exactly where the problem is, whether storage-side or blockchain-side."
+
+If asked: "Is this 100% deployed sa FICOBank?"
+
+"This is a capstone prototype aligned with the proposed architecture. It is implemented with private storage, SHA-256 hashing, Hyperledger Fabric, verification, audit records, alerts, and access control. Actual production deployment may integrate with FICOBank's real DVR/NVR or another approved footage export/storage workflow, depending on the bank's infrastructure."
+
+Defense demo script:
+
+1. Open Dashboard.
+   "This shows the chain-of-custody control panel and the implemented evidence flow."
+2. Open Evidence Register.
+   "Here, authorized CCTV footage can be uploaded or captured from a controlled camera source."
+3. Upload or record a short video.
+   "The footage is stored privately. The system will not upload the video to blockchain."
+4. Click Register, Hash, and Commit.
+   "At this point, the system generates SHA-256 hashes and commits the proof to Hyperledger Fabric."
+5. Show Fabric: committed.
+   "This confirms the blockchain proof was recorded."
+6. Open Fabric Ledger.
+   "This transaction ID is the Fabric proof of registration."
+7. Open Evidence Verification and click Verify Stored Original.
+   "The system recomputes the hash and compares it with the stored blockchain proof."
+8. Show verified result.
+   "A verified result means the current footage matches the original registered proof."
+9. Upload a modified video as a comparison file.
+   "This altered file produces a different SHA-256 hash, so the system detects a mismatch. The system identifies the evidence through its custody record ID and blockchain-recorded hash proof. It does not trust the filename alone."
+
+Closing answer:
+
+"Our system strengthens CCTV evidence integrity by adding a tamper-evident blockchain proof layer. It does not replace the bank's CCTV infrastructure. Instead, it secures the chain of custody after authorized footage is exported or registered. The footage stays in private storage, while SHA-256 hashes and metadata proofs are stored in Hyperledger Fabric. This makes evidence verification traceable, auditable, and resistant to undetected alteration."
 
 
 Admin login

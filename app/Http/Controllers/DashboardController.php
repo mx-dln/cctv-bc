@@ -43,7 +43,7 @@ class DashboardController extends Controller
             'recentAlerts' => $this->dashboardService->getRecentAlerts(),
             'cameraStatuses' => $this->dashboardService->getCameraStatuses(),
             'providerConnected' => $providerConnected,
-            'providerName' => $provider?->getProviderName() ?? 'No active DVR/NVR provider',
+            'providerName' => $provider?->getProviderName() ?? 'No active evidence source',
             'providerStats' => $providerStats,
             'recentTransactions' => \App\Models\BlockchainTransaction::latest()->limit(10)->get(),
             'recentActivity' => \App\Models\ActivityLog::with('user')->latest()->limit(10)->get(),

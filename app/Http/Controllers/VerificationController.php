@@ -8,6 +8,7 @@ use App\Services\EvidenceCustodyService;
 use App\Services\VerificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -56,6 +57,28 @@ class VerificationController extends Controller
         $message = $result['message'] ?? ('Verification result: ' . $result['status']);
 
         return back()->with('success', $message);
+    }
+
+    public function verifyUploaded(GeneratedLog $log, Request $request): JsonResponse|RedirectResponse
+    {
+        $validated = $request->validate([
+            'footage' => ['required', 'file', 'max:1048576'],
+        ]);
+
+        $result = $this->verificationService->verifyUploadedFootage($log, $validated['footage']);
+
+        $this->custody->recordVerified($log, $request->user(), $result);
+
+        $this->logger->log('verification_performed', 'verification', $request->user(),
+            'Uploaded comparison for event ' . $log->event_id . ': ' . $result['status'],
+            ['event_id' => $log->event_id, 'status' => $result['status'], 'mode' => 'uploaded_comparison']
+        );
+
+        if ($request->expectsJson()) {
+            return response()->json($result);
+        }
+
+        return back()->with($result['status'] === 'verified' ? 'success' : 'error', $result['message']);
     }
 
     public function show(GeneratedLog $log): Response

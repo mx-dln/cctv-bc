@@ -20,6 +20,17 @@ class AuditService
         if (!empty($filters['camera_id'])) $query->where('camera_id', $filters['camera_id']);
         if (!empty($filters['status'])) $query->where('status', $filters['status']);
         if (!empty($filters['label'])) $query->where('label', $filters['label']);
+        if (!empty($filters['operator'])) $query->where('registered_by', $filters['operator']);
+        if (!empty($filters['search'])) {
+            $search = $filters['search'];
+            $query->where(function ($query) use ($search) {
+                $query->where('record_id', 'like', "%{$search}%")
+                    ->orWhere('event_id', 'like', "%{$search}%")
+                    ->orWhere('filename', 'like', "%{$search}%")
+                    ->orWhere('label', 'like', "%{$search}%")
+                    ->orWhere('event_type', 'like', "%{$search}%");
+            });
+        }
 
         $logs = $query->get();
 

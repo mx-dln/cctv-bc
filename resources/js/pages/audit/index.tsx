@@ -1,14 +1,18 @@
 import { apiFetch } from '@/lib/api-fetch';
 import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
-import { FileText, Download, FileDown, FileSpreadsheet } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Clock, Download, FileDown, FileSpreadsheet, FileText, ShieldCheck } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import type { AuditReport } from '@/types';
+import type { AuditReport, GeneratedLog } from '@/types';
 
-export default function AuditIndex({ reports }: { reports: { data: AuditReport[] } }) {
+export default function AuditIndex({ reports, recentLogs, stats }: {
+    reports: { data: AuditReport[] };
+    recentLogs: GeneratedLog[];
+    stats: { total: number; verified: number; tampered: number; pending: number };
+}) {
     const [generating, setGenerating] = useState(false);
 
     const handleGenerate = async (format: string) => {
@@ -28,17 +32,17 @@ export default function AuditIndex({ reports }: { reports: { data: AuditReport[]
                 toast.success(`Report generated as ${format.toUpperCase()}`);
                 router.reload({ only: ['reports'] });
             }
-        } catch {
-            toast.error('Failed to generate report');
+        } catch (error) {
+            toast.error('Failed to generate report. Check that at least one evidence record exists and try again.');
         }
         setGenerating(false);
     };
 
-    const formatBytes = (bytes: number) => {
-        if (!bytes) return '-';
-        const sizes = ['B', 'KB', 'MB', 'GB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(1024));
-        return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${sizes[i]}`;
+    const statusClass = (status: string) => {
+        if (status === 'verified') return 'border-green-500 text-green-400';
+        if (status === 'tampered') return 'border-red-500 text-red-400';
+        if (status === 'missing') return 'border-orange-500 text-orange-400';
+        return 'border-yellow-500 text-yellow-400';
     };
 
     return (
@@ -59,6 +63,81 @@ export default function AuditIndex({ reports }: { reports: { data: AuditReport[]
                         </Button>
                     </div>
                 </div>
+
+                <div className="grid gap-4 md:grid-cols-4">
+                    <Card className="border-white/10 bg-gray-900/80">
+                        <CardHeader className="pb-2">
+                            <CardTitle className="flex items-center gap-2 text-sm text-gray-400"><FileText className="h-4 w-4 text-[#AD9334]" /> Total Evidence</CardTitle>
+                        </CardHeader>
+                        <CardContent><p className="text-3xl font-bold text-white">{stats.total}</p></CardContent>
+                    </Card>
+                    <Card className="border-white/10 bg-gray-900/80">
+                        <CardHeader className="pb-2">
+                            <CardTitle className="flex items-center gap-2 text-sm text-gray-400"><CheckCircle2 className="h-4 w-4 text-green-400" /> Verified</CardTitle>
+                        </CardHeader>
+                        <CardContent><p className="text-3xl font-bold text-green-400">{stats.verified}</p></CardContent>
+                    </Card>
+                    <Card className="border-white/10 bg-gray-900/80">
+                        <CardHeader className="pb-2">
+                            <CardTitle className="flex items-center gap-2 text-sm text-gray-400"><AlertTriangle className="h-4 w-4 text-red-400" /> Tampered</CardTitle>
+                        </CardHeader>
+                        <CardContent><p className="text-3xl font-bold text-red-400">{stats.tampered}</p></CardContent>
+                    </Card>
+                    <Card className="border-white/10 bg-gray-900/80">
+                        <CardHeader className="pb-2">
+                            <CardTitle className="flex items-center gap-2 text-sm text-gray-400"><Clock className="h-4 w-4 text-yellow-400" /> Pending</CardTitle>
+                        </CardHeader>
+                        <CardContent><p className="text-3xl font-bold text-yellow-400">{stats.pending}</p></CardContent>
+                    </Card>
+                </div>
+
+                <Card className="border-white/10 bg-gradient-to-br from-gray-900/80 to-gray-800/80 backdrop-blur-xl">
+                    <CardHeader className="flex flex-row items-center justify-between">
+                        <div>
+                            <CardTitle className="text-white">Recent Chain-of-Custody Activity</CardTitle>
+                            <CardDescription>Latest evidence records and verification outcomes</CardDescription>
+                        </div>
+                        <Link href="/audit/logs">
+                            <Button variant="outline" className="border-white/10 text-gray-300">View All Logs</Button>
+                        </Link>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="overflow-x-auto">
+                            <table className="w-full">
+                                <thead>
+                                    <tr className="border-b border-white/10 text-left text-sm text-gray-400">
+                                        <th className="pb-3 font-medium">Record ID</th>
+                                        <th className="pb-3 font-medium">Filename</th>
+                                        <th className="pb-3 font-medium">Camera</th>
+                                        <th className="pb-3 font-medium">Status</th>
+                                        <th className="pb-3 font-medium">Fabric</th>
+                                        <th className="pb-3 font-medium">Updated</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {recentLogs.map((log) => (
+                                        <tr key={log.id} className="border-b border-white/5 text-sm transition-colors hover:bg-white/5">
+                                            <td className="py-3 font-mono text-xs text-[#AD9334]">{log.record_id ?? log.event_id}</td>
+                                            <td className="py-3 text-gray-300">{log.filename ?? '-'}</td>
+                                            <td className="py-3 text-gray-400">{log.camera?.name ?? '-'}</td>
+                                            <td className="py-3">
+                                                <Badge variant="outline" className={statusClass(log.status)}>{log.status}</Badge>
+                                            </td>
+                                            <td className="py-3 text-gray-400">{log.hash_record?.blockchain_transaction?.status ?? 'No transaction'}</td>
+                                            <td className="py-3 text-gray-400">{new Date(log.updated_at).toLocaleString()}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                        {recentLogs.length === 0 && (
+                            <div className="py-10 text-center">
+                                <ShieldCheck className="mx-auto mb-3 h-8 w-8 text-gray-600" />
+                                <p className="text-sm text-gray-500">No evidence activity yet. Register evidence first, then verify or compare it.</p>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
 
                 <Card className="border-white/10 bg-gradient-to-br from-gray-900/80 to-gray-800/80 backdrop-blur-xl">
                     <CardHeader>
@@ -112,6 +191,7 @@ export default function AuditIndex({ reports }: { reports: { data: AuditReport[]
                                 </tbody>
                             </table>
                         </div>
+                        {reports.data.length === 0 && <p className="py-8 text-center text-sm text-gray-500">No reports generated yet.</p>}
                     </CardContent>
                 </Card>
             </div>

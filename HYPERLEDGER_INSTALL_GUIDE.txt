@@ -355,9 +355,9 @@ password
 
 Then:
 
-1. Open CCTV Register.
-2. Choose an actual small MP4 file using "CCTV video file".
-3. Leave "Existing relative storage path" empty when uploading a new file.
+1. Open Evidence Register.
+2. Choose an actual small MP4 file using "CCTV footage file", use USB Camera Capture, or use an authorized already-stored private footage path.
+3. Leave "Already stored footage path" empty when uploading a new file.
 4. Fill filename, resolution, date/time, and recording information if needed.
 5. Click Register and Commit.
 6. The new record should show Fabric: committed.
@@ -397,7 +397,7 @@ Fix:
 1. Make sure Ubuntu Fabric network is running.
 2. Make sure the gateway PowerShell window is running npm start.
 3. Run curl.exe http://127.0.0.1:8787/health.
-4. On CCTV Register, click Commit on the pending record.
+4. On Evidence Register, click Commit on the pending record.
 5. Refresh the page.
 
 The project also supports retry through Laravel code; after retry success the transaction becomes committed and receives a real Fabric transaction ID.
@@ -495,13 +495,13 @@ Run the gateway commands in Windows PowerShell, not Ubuntu.
 
 
 Mistake:
-Seeing Verification result: unavailable on an old NVR-only record.
+Seeing Verification result: unavailable on an old remote-reference record.
 
 Reason:
-The record used nvr://... and Laravel did not have local video bytes to hash.
+The record used a remote reference such as nvr://... and Laravel did not have local video bytes to hash.
 
 Fix:
-Upload an actual MP4 file through CCTV Register, or import the NVR footage into local storage first.
+Upload an actual MP4 file through Evidence Register, use USB Camera Capture, or import the authorized footage into local/private storage first. A DVR/NVR is optional for prototype testing.
 
 
 Mistake:

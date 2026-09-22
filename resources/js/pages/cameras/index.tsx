@@ -33,7 +33,7 @@ export default function CameraIndex({ cameras, connected, providerName }: { came
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="text-2xl font-bold text-white">Camera Management</h1>
-                        <p className="text-sm text-gray-400">Live cameras from connected DVR</p>
+                        <p className="text-sm text-gray-400">Evidence sources from the active provider</p>
                     </div>
                     <Badge variant="outline" className={`flex items-center gap-2 ${connected ? 'border-[#AD9334] text-[#AD9334]' : 'border-red-500 text-red-400'}`}>
                         {connected ? <Wifi className="h-4 w-4" /> : <WifiOff className="h-4 w-4" />}
@@ -46,7 +46,7 @@ export default function CameraIndex({ cameras, connected, providerName }: { came
                         <div className="flex items-center justify-between">
                             <CardTitle className="flex items-center gap-2 text-white">
                                 <Camera className="h-5 w-5 text-[#AD9334]" />
-                                DVR Channels ({filtered.length})
+                                Evidence Sources ({filtered.length})
                             </CardTitle>
                             <div className="relative">
                                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
@@ -63,8 +63,8 @@ export default function CameraIndex({ cameras, connected, providerName }: { came
                         {!connected ? (
                             <div className="flex flex-col items-center justify-center py-12 text-gray-500">
                                 <Cctv className="mb-3 h-12 w-12 text-gray-600" />
-                                <p className="text-lg font-medium">No DVR Connected</p>
-                                <p className="text-sm">Connect a DVR/NVR provider or enable Mock Provider in Settings to see cameras</p>
+                                <p className="text-lg font-medium">No Active Evidence Source</p>
+                                <p className="text-sm">Activate Baseus Wi-Fi Camera, Mock Provider, or connect a DVR/NVR in Settings.</p>
                             </div>
                         ) : (
                             <div className="overflow-x-auto">
@@ -98,7 +98,7 @@ export default function CameraIndex({ cameras, connected, providerName }: { came
                                         {filtered.length === 0 && (
                                             <tr>
                                                 <td colSpan={6} className="py-8 text-center text-sm text-gray-500">
-                                                    No cameras found on the connected DVR.
+                                                    No evidence sources found on the active provider.
                                                 </td>
                                             </tr>
                                         )}

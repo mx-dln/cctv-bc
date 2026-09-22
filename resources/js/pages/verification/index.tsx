@@ -12,6 +12,8 @@ import type { GeneratedLog } from '@/types';
 
 export default function VerificationIndex({ logs }: { logs: { data: GeneratedLog[] } }) {
     const [verifying, setVerifying] = useState<number | null>(null);
+    const [comparing, setComparing] = useState<number | null>(null);
+    const [comparisonFiles, setComparisonFiles] = useState<Record<number, File | null>>({});
     const [results, setResults] = useState<Record<number, any>>({});
     const [search, setSearch] = useState('');
 
@@ -37,6 +39,37 @@ export default function VerificationIndex({ logs }: { logs: { data: GeneratedLog
             toast.error('Verification failed');
         }
         setVerifying(null);
+    };
+
+    const handleCompareUpload = async (log: GeneratedLog) => {
+        const file = comparisonFiles[log.id];
+
+        if (!file) {
+            toast.error('Choose the edited or questioned video first.');
+            return;
+        }
+
+        setComparing(log.id);
+        try {
+            const body = new FormData();
+            body.append('footage', file);
+
+            const res = await apiFetch(`/verification/${log.id}/check-upload`, {
+                method: 'POST',
+                body,
+            });
+            const data = await res.json();
+            setResults(prev => ({ ...prev, [log.id]: data }));
+            toast(data.status === 'verified' ? 'Uploaded file matches the original evidence' : 'Uploaded file does not match the original evidence', {
+                style: data.status === 'verified'
+                    ? { background: '#065f46', color: '#d1fae5' }
+                    : { background: '#7f1d1d', color: '#fecaca' },
+            });
+            router.reload({ only: ['logs'] });
+        } catch {
+            toast.error('Uploaded comparison failed');
+        }
+        setComparing(null);
     };
 
     const formatDuration = (sec: number | null) => {
@@ -71,7 +104,7 @@ export default function VerificationIndex({ logs }: { logs: { data: GeneratedLog
                             <ShieldCheck className="h-5 w-5 text-[#AD9334]" />
                             Verification Queue
                         </CardTitle>
-                        <CardDescription>Select a log to verify its integrity</CardDescription>
+                    <CardDescription>Verify the stored original, or compare an edited/questioned copy against it.</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <div className="overflow-x-auto">
@@ -117,19 +150,49 @@ export default function VerificationIndex({ logs }: { logs: { data: GeneratedLog
                                                 </Badge>
                                             </td>
                                             <td className="py-3">
-                                                <Button
-                                                    onClick={() => handleVerify(log)}
-                                                    disabled={verifying === log.id}
-                                                    size="sm"
-                                                    className="bg-[#AD9334] text-white hover:bg-[#C2A74A]"
-                                                >
-                                                    {verifying === log.id ? (
-                                                        <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                                                    ) : (
-                                                        <ShieldCheck className="mr-1 h-3 w-3" />
-                                                    )}
-                                                    Verify
-                                                </Button>
+                                                <div className="flex min-w-[340px] flex-col gap-2">
+                                                    <Button
+                                                        onClick={() => handleVerify(log)}
+                                                        disabled={verifying === log.id}
+                                                        size="sm"
+                                                        className="bg-[#AD9334] text-white hover:bg-[#C2A74A]"
+                                                    >
+                                                        {verifying === log.id ? (
+                                                            <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                                                        ) : (
+                                                            <ShieldCheck className="mr-1 h-3 w-3" />
+                                                        )}
+                                                        Verify Stored Original
+                                                    </Button>
+                                                    <div className="grid grid-cols-[1fr_auto] gap-2">
+                                                        <Input
+                                                            type="file"
+                                                            accept="video/*"
+                                                            onChange={(event) => setComparisonFiles(prev => ({
+                                                                ...prev,
+                                                                [log.id]: event.target.files?.[0] ?? null,
+                                                            }))}
+                                                            className="h-9 border-white/10 bg-white/5 text-xs text-white file:mr-3 file:rounded file:border-0 file:bg-[#AD9334] file:px-2 file:py-1 file:text-xs file:font-medium file:text-white"
+                                                        />
+                                                        <Button
+                                                            onClick={() => handleCompareUpload(log)}
+                                                            disabled={comparing === log.id || !comparisonFiles[log.id]}
+                                                            size="sm"
+                                                            variant="outline"
+                                                            className="border-white/15 bg-white/5 text-white hover:bg-white/10"
+                                                        >
+                                                            {comparing === log.id ? (
+                                                                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                                                            ) : (
+                                                                <FileSearch className="mr-1 h-3 w-3" />
+                                                            )}
+                                                            Compare
+                                                        </Button>
+                                                    </div>
+                                                    <p className="text-xs text-gray-500">
+                                                        For tamper testing, choose the cut or edited copy here instead of registering it as new evidence.
+                                                    </p>
+                                                </div>
                                             </td>
                                         </motion.tr>
                                     ))}
@@ -162,7 +225,10 @@ export default function VerificationIndex({ logs }: { logs: { data: GeneratedLog
                                                             Local: {result.local_verification?.status} |
                                                             Blockchain: {!result.blockchain_verification || result.blockchain_verification.available === false ? 'Unavailable' : result.blockchain_verification.verified ? 'Verified' : 'Mismatch'}
                                                         </p>
-                                                        {result.tamper_details?.differences && Object.keys(result.tamper_details.differences).length > 0 && (
+                                                        {result.message && (
+                                                            <p className="mt-1 text-sm text-gray-300">{result.message}</p>
+                                                        )}
+                                                        {result.status === 'tampered' && result.tamper_details?.differences && Object.keys(result.tamper_details.differences).length > 0 && (
                                                             <div className="mt-2">
                                                                 <p className="text-sm font-medium text-red-400">Tampered Fields:</p>
                                                                 {Object.entries(result.tamper_details.differences).map(([field, vals]: [string, any]) => (
@@ -170,6 +236,14 @@ export default function VerificationIndex({ logs }: { logs: { data: GeneratedLog
                                                                         {field}: <span className="text-red-400 line-through">{String(vals.original)}</span> → <span className="text-yellow-400">{String(vals.current)}</span>
                                                                     </p>
                                                                 ))}
+                                                            </div>
+                                                        )}
+                                                        {result.status === 'verified' && result.local_verification?.original_footage_sha256 && (
+                                                            <div className="mt-2">
+                                                                <p className="text-sm font-medium text-green-400">Matching Evidence Hash:</p>
+                                                                <p className="break-all text-xs text-gray-400">
+                                                                    footage_sha256: <span className="text-green-300">{result.local_verification.original_footage_sha256}</span>
+                                                                </p>
                                                             </div>
                                                         )}
                                                     </div>

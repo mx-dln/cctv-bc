@@ -1,6 +1,6 @@
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
-import { Blocks, CheckCircle2, Circle, FileVideo, Hash, Search, ShieldCheck, Square, Upload, Video } from 'lucide-react';
-import { FormEvent, useRef, useState } from 'react';
+import { Blocks, CheckCircle2, FileVideo, Hash, Search, ShieldCheck, Upload } from 'lucide-react';
+import { FormEvent, useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -20,16 +20,8 @@ function statusClass(status: string) {
     }[status] ?? 'border-gray-500 text-gray-400';
 }
 
-export default function CustodyRecords({ cameras, records, search = '' }: any) {
+export default function CustodyRecords({ cameras, records, search = '', providerConnected = false, providerName = 'No active evidence source' }: any) {
     const [query, setQuery] = useState(search);
-    const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
-    const [recording, setRecording] = useState(false);
-    const [cameraError, setCameraError] = useState('');
-    const [recordedPreviewUrl, setRecordedPreviewUrl] = useState('');
-    const recorderRef = useRef<MediaRecorder | null>(null);
-    const chunksRef = useRef<Blob[]>([]);
-    const startedAtRef = useRef<number | null>(null);
-    const videoRef = useRef<HTMLVideoElement | null>(null);
     const { auth, flash } = usePage<any>().props;
     const canRegister = auth.permissions?.includes('manage-verification');
     const form = useForm({
@@ -44,6 +36,7 @@ export default function CustodyRecords({ cameras, records, search = '' }: any) {
         recording_info: '',
         label: '',
     });
+    const displayedFilename = form.data.footage?.name ?? form.data.filename;
 
     function submit(event: FormEvent) {
         event.preventDefault();
@@ -57,89 +50,15 @@ export default function CustodyRecords({ cameras, records, search = '' }: any) {
 
     function selectFootage(file: File | null) {
         form.clearErrors('footage');
-        form.setData('footage', file);
-        if (file) {
-            form.setData('recording_url', '');
-        }
+        form.setData({
+            ...form.data,
+            footage: file,
+            filename: file?.name ?? '',
+            recording_url: file ? '' : form.data.recording_url,
+        });
 
         if (file && file.size > MAX_FOOTAGE_SIZE_BYTES) {
             form.setError('footage', 'The CCTV footage must be 1 GB or smaller.');
-        }
-    }
-
-    async function startCameraRecording() {
-        setCameraError('');
-
-        if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
-            setCameraError('Camera recording is not supported by this browser.');
-            return;
-        }
-
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({
-                video: { width: { ideal: 1280 }, height: { ideal: 720 } },
-                audio: true,
-            });
-            setCameraStream(stream);
-
-            if (videoRef.current) {
-                videoRef.current.srcObject = stream;
-                await videoRef.current.play();
-            }
-
-            const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus')
-                ? 'video/webm;codecs=vp8,opus'
-                : 'video/webm';
-
-            chunksRef.current = [];
-            startedAtRef.current = Date.now();
-
-            const recorder = new MediaRecorder(stream, { mimeType });
-            recorderRef.current = recorder;
-
-            recorder.ondataavailable = (event) => {
-                if (event.data.size > 0) {
-                    chunksRef.current.push(event.data);
-                }
-            };
-
-            recorder.onstop = () => {
-                const blob = new Blob(chunksRef.current, { type: 'video/webm' });
-                const timestamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
-                const file = new File([blob], `baseus_camera_${timestamp}.webm`, { type: 'video/webm' });
-                const durationSeconds = startedAtRef.current ? Math.max(1, Math.round((Date.now() - startedAtRef.current) / 1000)) : '';
-
-                if (recordedPreviewUrl) {
-                    URL.revokeObjectURL(recordedPreviewUrl);
-                }
-
-                setRecordedPreviewUrl(URL.createObjectURL(blob));
-                selectFootage(file);
-                form.setData('filename', file.name);
-                form.setData('duration', String(durationSeconds));
-                form.setData('recording_info', 'Captured from connected USB camera through browser recorder');
-                stopCameraStream(stream);
-            };
-
-            recorder.start();
-            setRecording(true);
-        } catch (error) {
-            setCameraError('Unable to access the camera. Check browser permission or reconnect the USB camera.');
-        }
-    }
-
-    function stopCameraRecording() {
-        if (recorderRef.current && recorderRef.current.state !== 'inactive') {
-            recorderRef.current.stop();
-        }
-        setRecording(false);
-    }
-
-    function stopCameraStream(stream = cameraStream) {
-        stream?.getTracks().forEach((track) => track.stop());
-        setCameraStream(null);
-        if (videoRef.current) {
-            videoRef.current.srcObject = null;
         }
     }
 
@@ -169,40 +88,29 @@ export default function CustodyRecords({ cameras, records, search = '' }: any) {
                             <form className="space-y-4" onSubmit={submit}>
                                 <div className="space-y-2">
                                     <Label htmlFor="camera_id">Camera</Label>
-                                    <select id="camera_id" className="w-full rounded-md border border-white/10 bg-gray-950 px-3 py-2 text-sm text-white" value={form.data.camera_id} onChange={(e) => form.setData('camera_id', e.target.value)}>
+                                    <select id="camera_id" className="w-full rounded-md border border-white/10 bg-gray-950 px-3 py-2 text-sm text-white" value={form.data.camera_id} onChange={(e) => form.setData('camera_id', e.target.value)} disabled={!providerConnected || cameras.length === 0}>
                                         {cameras.map((camera: any) => <option key={camera.id} value={camera.id}>{camera.provider_camera_id} - {camera.name}</option>)}
                                     </select>
+                                    <p className={providerConnected ? 'text-xs text-gray-500' : 'text-xs text-yellow-400'}>
+                                        {providerConnected ? `Source list from ${providerName}.` : 'No active footage source. Activate Baseus Wi-Fi Camera, Mock Provider, or connect a DVR/NVR in Settings.'}
+                                    </p>
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="footage">CCTV footage file</Label>
                                     <Input id="footage" type="file" accept="video/*" onChange={(e) => selectFootage(e.target.files?.[0] ?? null)} />
                                     <p className="text-xs text-gray-500">Maximum upload size: 1 GB.</p>
                                 </div>
-                                <div className="space-y-3 rounded-lg border border-white/10 bg-white/[0.03] p-3">
-                                    <div className="flex items-center justify-between gap-3">
-                                        <div>
-                                            <p className="flex items-center gap-2 text-sm font-medium text-white"><Video className="h-4 w-4 text-[#AD9334]" /> USB Camera Capture</p>
-                                            <p className="text-xs text-gray-500">Record from a connected camera, then register it as custody footage.</p>
-                                        </div>
-                                        {recording ? (
-                                            <Button type="button" variant="outline" onClick={stopCameraRecording} className="border-red-500/50 text-red-300">
-                                                <Square className="mr-2 h-4 w-4" /> Stop
-                                            </Button>
-                                        ) : (
-                                            <Button type="button" variant="outline" onClick={startCameraRecording} className="border-[#AD9334]/50 text-[#E8D787]">
-                                                <Circle className="mr-2 h-4 w-4" /> Record
-                                            </Button>
-                                        )}
-                                    </div>
-                                    <video ref={videoRef} muted playsInline className={`aspect-video w-full rounded-md bg-black ${cameraStream ? 'block' : 'hidden'}`} />
-                                    {recordedPreviewUrl && !cameraStream && <video src={recordedPreviewUrl} controls className="aspect-video w-full rounded-md bg-black" />}
-                                    {form.data.footage && <p className="text-xs text-gray-400">Selected footage: {form.data.footage.name}</p>}
-                                    {cameraError && <p role="alert" className="text-xs text-red-400">{cameraError}</p>}
-                                </div>
                                 <div className="grid gap-3 md:grid-cols-2">
                                     <div className="space-y-2">
                                         <Label htmlFor="filename">Filename</Label>
-                                        <Input id="filename" value={form.data.filename} onChange={(e) => form.setData('filename', e.target.value)} placeholder="CAM03_20260115_143210.mp4" />
+                                        <Input
+                                            id="filename"
+                                            value={displayedFilename}
+                                            onChange={(e) => form.setData('filename', e.target.value)}
+                                            placeholder="Automatically uses selected footage name"
+                                            readOnly={Boolean(form.data.footage)}
+                                        />
+                                        {form.data.footage && <p className="text-xs text-gray-500">Filename is locked to the selected CCTV footage file.</p>}
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="resolution">Resolution</Label>
@@ -234,7 +142,7 @@ export default function CustodyRecords({ cameras, records, search = '' }: any) {
                                     <Label htmlFor="recording_info">Recording information</Label>
                                     <Input id="recording_info" value={form.data.recording_info} onChange={(e) => form.setData('recording_info', e.target.value)} placeholder="DVR channel, export operator, case notes" />
                                 </div>
-                                <Button type="submit" disabled={form.processing} className="w-full">
+                                <Button type="submit" disabled={form.processing || !providerConnected || cameras.length === 0} className="w-full">
                                     <ShieldCheck className="mr-2 h-4 w-4" /> Register, Hash, and Commit
                                 </Button>
                                 {Object.entries(form.errors).map(([field, error]) => <p key={field} role="alert" className="text-sm text-red-400">{error}</p>)}

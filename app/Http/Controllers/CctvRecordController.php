@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Camera;
 use App\Models\GeneratedLog;
+use App\Models\ProviderConnection;
+use App\Services\Cctv\CctvProviderFactory;
 use App\Services\CctvRecordService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -12,12 +14,63 @@ use Inertia\Response;
 
 class CctvRecordController extends Controller
 {
-    public function __construct(private CctvRecordService $records) {}
+    public function __construct(
+        private CctvRecordService $records,
+        private CctvProviderFactory $providerFactory,
+    ) {}
 
     public function index(Request $request): Response
     {
+        $activeProvider = ProviderConnection::where('is_active', true)->first();
+        $provider = $activeProvider ? $this->providerFactory->create($activeProvider) : null;
+        $providerConnected = $provider ? (($provider->verifyConnection())['connected'] ?? false) : false;
+        $providerName = $provider?->getProviderName();
+        $cameras = collect();
+
+        if ($providerConnected && $providerName) {
+            $cameras = $provider->getCameras()->map(function (array $cameraData) use ($providerName) {
+                return Camera::updateOrCreate(
+                    [
+                        'provider' => $providerName,
+                        'provider_camera_id' => $cameraData['provider_camera_id'],
+                    ],
+                    [
+                        'name' => $cameraData['name'],
+                        'location' => $cameraData['location'] ?? null,
+                        'status' => $cameraData['status'] ?? 'online',
+                        'resolution' => $cameraData['resolution'] ?? null,
+                        'fps' => $cameraData['fps'] ?? null,
+                        'last_seen' => now(),
+                    ],
+                );
+            })->sortBy('name')->values();
+        }
+
+        if (!$providerConnected) {
+            $controlledSource = Camera::updateOrCreate(
+                [
+                    'provider' => 'Controlled Footage Source',
+                    'provider_camera_id' => 'controlled-source',
+                ],
+                [
+                    'name' => 'Controlled Footage Source',
+                    'location' => 'Manual upload or controlled camera capture',
+                    'status' => 'online',
+                    'resolution' => null,
+                    'fps' => null,
+                    'last_seen' => now(),
+                ],
+            );
+
+            $cameras = collect([$controlledSource]);
+            $providerName = 'Controlled Footage Source';
+            $providerConnected = true;
+        }
+
         return Inertia::render('custody/index', [
-            'cameras' => Camera::orderBy('name')->get(['id', 'provider_camera_id', 'name', 'resolution']),
+            'cameras' => $cameras->map->only(['id', 'provider_camera_id', 'name', 'resolution'])->values(),
+            'providerConnected' => $providerConnected,
+            'providerName' => $providerName ?? 'No active DVR/NVR provider',
             'records' => GeneratedLog::with(['camera', 'hashRecord', 'hashRecord.blockchainTransaction', 'registeredBy'])
                 ->latest('registered_at')
                 ->when($request->filled('search'), fn ($query) => $query->where(function ($query) use ($request) {

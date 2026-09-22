@@ -25,7 +25,7 @@ class CameraController extends Controller
             return Inertia::render('cameras/index', [
                 'cameras' => [],
                 'connected' => false,
-                'providerName' => 'No active DVR/NVR provider',
+                'providerName' => 'No active evidence source',
             ]);
         }
 

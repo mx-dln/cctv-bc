@@ -2,7 +2,7 @@ import { apiFetch } from '@/lib/api-fetch';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Cctv, Plus, Settings, Trash2, CheckCircle2, XCircle, Loader2, Wifi, WifiOff, Play, HardDrive, Monitor, Cpu, Server } from 'lucide-react';
+import { Cctv, Plus, Settings, Trash2, CheckCircle2, XCircle, Loader2, Wifi, WifiOff, Play, Radar } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -18,6 +18,9 @@ export default function ProviderSettings({ connections, availableProviders }: { 
     const [editId, setEditId] = useState<number | null>(null);
     const [testing, setTesting] = useState<number | null>(null);
     const [testResult, setTestResult] = useState<Record<number, any>>({});
+    const [scanning, setScanning] = useState(false);
+    const [discovery, setDiscovery] = useState<any | null>(null);
+    const [connectingCamera, setConnectingCamera] = useState<string | null>(null);
 
     const { data, setData, post, put, processing, errors, reset } = useForm({
         name: '',
@@ -95,6 +98,36 @@ export default function ProviderSettings({ connections, availableProviders }: { 
         });
     };
 
+    const handleBaseusDiscovery = async () => {
+        setScanning(true);
+        setDiscovery(null);
+        try {
+            const res = await apiFetch('/settings/provider/baseus/discover', { method: 'POST' });
+            const data = await res.json();
+            setDiscovery(data);
+            toast(data.cameras?.length ? 'Baseus camera detected' : 'No Baseus camera detected on the current LAN');
+        } catch {
+            toast.error('Network scan failed');
+        }
+        setScanning(false);
+    };
+
+    const handleConnectBaseus = async (camera: any) => {
+        setConnectingCamera(camera.id);
+        try {
+            await apiFetch('/settings/provider/baseus/connect', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(camera),
+            });
+            toast.success('Baseus camera connected');
+            router.reload();
+        } catch {
+            toast.error('Unable to connect Baseus camera');
+        }
+        setConnectingCamera(null);
+    };
+
     const isDahua = data.provider_type === 'dahua';
 
     return (
@@ -105,7 +138,7 @@ export default function ProviderSettings({ connections, availableProviders }: { 
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="text-2xl font-bold text-white">CCTV Provider Configuration</h1>
-                        <p className="text-sm text-gray-400">Configure the CCTV DVR/NVR provider or use Mock Provider for development</p>
+                        <p className="text-sm text-gray-400">Configure optional DVR/NVR providers, Mock Provider, or Baseus USB camera capture</p>
                     </div>
                     <Button onClick={openCreate} className="bg-gradient-to-r from-[#AD9334] to-[#C2A74A] text-white hover:from-[#C2A74A] hover:to-[#AD9334]">
                         <Plus className="mr-2 h-4 w-4" /> Add Connection
@@ -113,6 +146,65 @@ export default function ProviderSettings({ connections, availableProviders }: { 
                 </div>
 
                 <div className="space-y-4">
+                    <Card className="border-white/10 bg-gradient-to-br from-gray-900/80 to-gray-800/80 backdrop-blur-xl">
+                        <CardHeader>
+                            <div className="flex items-center justify-between gap-4">
+                                <div>
+                                    <CardTitle className="flex items-center gap-2 text-white">
+                                        <Radar className="h-5 w-5 text-[#AD9334]" />
+                                        Baseus LAN Camera Discovery
+                                    </CardTitle>
+                                    <CardDescription className="text-gray-400">
+                                        Finds Baseus S0TV00 on the current private LAN without saving a fixed IP address.
+                                    </CardDescription>
+                                </div>
+                                <Button onClick={handleBaseusDiscovery} disabled={scanning} className="bg-[#AD9334] text-white hover:bg-[#C2A74A]">
+                                    {scanning ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Radar className="mr-2 h-4 w-4" />}
+                                    {scanning ? 'Scanning...' : 'Scan Network'}
+                                </Button>
+                            </div>
+                        </CardHeader>
+                        <CardContent>
+                            {scanning && <p className="text-sm text-gray-400">Searching for Baseus cameras...</p>}
+
+                            {!scanning && discovery?.cameras?.length > 0 && (
+                                <div className="space-y-3">
+                                    {discovery.cameras.map((camera: any) => (
+                                        <div key={camera.id} className="flex flex-col gap-3 rounded-lg border border-[#AD9334]/30 bg-[#AD9334]/10 p-4 md:flex-row md:items-center md:justify-between">
+                                            <div>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="h-2.5 w-2.5 rounded-full bg-green-400" />
+                                                    <p className="font-semibold text-white">{camera.manufacturer} {camera.model}</p>
+                                                    <Badge className="bg-green-600 text-white">Online</Badge>
+                                                </div>
+                                                <div className="mt-2 grid gap-x-6 gap-y-1 text-sm text-gray-300 md:grid-cols-2">
+                                                    <span>IP: <span className="font-mono text-white">{camera.ip}</span></span>
+                                                    <span>MAC: <span className="font-mono text-white">{camera.mac || 'Unavailable'}</span></span>
+                                                    <span>Port: <span className="font-mono text-white">{camera.port}</span></span>
+                                                    <span>Status: <span className="text-green-300">{camera.status}</span></span>
+                                                </div>
+                                                <p className="mt-2 text-xs text-gray-500">Identity: {camera.identity_method}. IP is dynamic and can change after DHCP renewal.</p>
+                                            </div>
+                                            <Button onClick={() => handleConnectBaseus(camera)} disabled={connectingCamera === camera.id} className="bg-[#AD9334] text-white hover:bg-[#C2A74A]">
+                                                {connectingCamera === camera.id && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                                Connect
+                                            </Button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {!scanning && discovery && discovery.cameras?.length === 0 && (
+                                <div className="flex flex-col items-start gap-3 rounded-lg border border-white/10 bg-white/5 p-4 text-sm text-gray-400">
+                                    <p>No Baseus camera detected on the current LAN.</p>
+                                    <Button onClick={handleBaseusDiscovery} variant="outline" className="border-[#AD9334] text-[#AD9334]">
+                                        Scan Again
+                                    </Button>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+
                     {connections.map((conn) => {
                         const tr = testResult[conn.id];
                         return (
@@ -202,7 +294,7 @@ export default function ProviderSettings({ connections, availableProviders }: { 
                         <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-white/10 py-12 text-gray-500">
                             <Cctv className="mb-3 h-12 w-12 text-gray-600" />
                             <p className="text-lg font-medium">No provider connections</p>
-                            <p className="text-sm">Add a Mock or Dahua provider to start monitoring</p>
+                            <p className="text-sm">Add Mock, Baseus USB Camera, or Dahua provider to start evidence registration</p>
                             <Button onClick={openCreate} className="mt-4 bg-[#AD9334] text-white hover:bg-[#C2A74A]">
                                 <Plus className="mr-2 h-4 w-4" /> Add Connection
                             </Button>
@@ -215,7 +307,7 @@ export default function ProviderSettings({ connections, availableProviders }: { 
                 <DialogContent className="max-w-lg border-white/10 bg-gray-900 text-white">
                     <DialogHeader>
                         <DialogTitle className="text-white">{editId ? 'Edit Connection' : 'New Connection'}</DialogTitle>
-                        <DialogDescription className="text-gray-400">Configure a CCTV DVR/NVR or Mock Provider</DialogDescription>
+                        <DialogDescription className="text-gray-400">Configure a DVR/NVR, Mock Provider, or Baseus USB camera capture source</DialogDescription>
                     </DialogHeader>
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div className="grid gap-4 md:grid-cols-2">
@@ -283,8 +375,13 @@ export default function ProviderSettings({ connections, availableProviders }: { 
 
                         {!isDahua && (
                             <div className="rounded-lg bg-white/5 p-4 text-sm text-gray-400">
-                                Mock Provider runs locally without connecting to a real DVR.
-                                All data is simulated with realistic Dahua-format events for development and testing.
+                                {data.provider_type === 'baseus'
+                                    ? 'Baseus USB Camera uses the browser camera recorder on Evidence Register. It does not need host, port, username, or password. Activate it to show Baseus as the controlled capture source.'
+                                    : 'Mock Provider runs locally without connecting to a real DVR. All data is simulated with realistic camera events for development and testing.'}
+                                <label className="mt-4 flex items-center gap-2">
+                                    <input type="checkbox" checked={data.is_active} onChange={(e) => setData('is_active', e.target.checked)} className="h-4 w-4 rounded border-white/10 bg-white/5 text-[#AD9334]" />
+                                    <span className="text-gray-300">Active</span>
+                                </label>
                             </div>
                         )}
 

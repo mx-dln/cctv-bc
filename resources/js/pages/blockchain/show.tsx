@@ -6,6 +6,9 @@ import { Badge } from '@/components/ui/badge';
 import type { BlockchainTransaction } from '@/types';
 
 export default function BlockchainShow({ transaction }: { transaction: BlockchainTransaction }) {
+    const operation = transaction.response?.operation === 'verification' ? 'Verification Query' : 'Registration Commit';
+    const functionName = transaction.response?.function ?? 'CommitCCTVCustodyLog';
+
     return (
         <>
             <Head title="Transaction Details" />
@@ -39,6 +42,10 @@ export default function BlockchainShow({ transaction }: { transaction: Blockchai
                                 }`}>{transaction.status}</Badge>
                             </div>
                             <div className="flex justify-between border-b border-white/10 pb-2">
+                                <span className="text-sm text-gray-400">Operation</span>
+                                <span className="text-sm text-white">{operation}</span>
+                            </div>
+                            <div className="flex justify-between border-b border-white/10 pb-2">
                                 <span className="text-sm text-gray-400">Channel</span>
                                 <span className="text-sm text-white">{transaction.channel}</span>
                             </div>
@@ -48,7 +55,7 @@ export default function BlockchainShow({ transaction }: { transaction: Blockchai
                             </div>
                             <div className="flex justify-between border-b border-white/10 pb-2">
                                 <span className="text-sm text-gray-400">Function</span>
-                                <span className="text-sm font-mono text-[#AD9334]">{'CommitCCTVCustodyLog'}</span>
+                                <span className="text-sm font-mono text-[#AD9334]">{functionName}</span>
                             </div>
                             <div className="flex justify-between border-b border-white/10 pb-2">
                                 <span className="text-sm text-gray-400">Block Number</span>

@@ -10,6 +10,7 @@ use App\Services\ActivityLoggerService;
 use App\Services\AuditService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -26,10 +27,36 @@ class AuditController extends Controller
 
     public function index(): Response
     {
-        $reports = AuditReport::with('user')->latest()->paginate(10);
+        try {
+            $reports = AuditReport::with('user')->latest()->paginate(10);
+            $recentLogs = GeneratedLog::with(['camera', 'hashRecord.blockchainTransaction', 'registeredBy'])
+                ->latest('updated_at')
+                ->limit(10)
+                ->get();
+
+            $stats = [
+                'total' => GeneratedLog::count(),
+                'verified' => GeneratedLog::where('status', 'verified')->count(),
+                'tampered' => GeneratedLog::where('status', 'tampered')->count(),
+                'pending' => GeneratedLog::whereIn('status', ['pending', 'registered'])->count(),
+            ];
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            $reports = new LengthAwarePaginator([], 0, 10);
+            $recentLogs = collect();
+            $stats = [
+                'total' => 0,
+                'verified' => 0,
+                'tampered' => 0,
+                'pending' => 0,
+            ];
+        }
 
         return Inertia::render('audit/index', [
             'reports' => $reports,
+            'recentLogs' => $recentLogs,
+            'stats' => $stats,
         ]);
     }
 
@@ -79,7 +106,7 @@ class AuditController extends Controller
             user: $request->user(),
             title: $request->title,
             type: $request->type ?? 'verification',
-            filters: $request->only(['date_from', 'date_to', 'camera_id', 'status', 'operator']),
+            filters: $request->only(['date_from', 'date_to', 'camera_id', 'status', 'operator', 'search']),
             format: $request->format ?? 'pdf'
         );
 

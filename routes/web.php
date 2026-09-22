@@ -28,6 +28,7 @@ Route::middleware(['auth', 'verified', \App\Http\Middleware\AuthorizeCustodyAcce
     Route::prefix('verification')->group(function () {
         Route::get('/', [VerificationController::class, 'index'])->name('verification.index');
         Route::post('/{log}/check', [VerificationController::class, 'verify'])->name('verification.check');
+        Route::post('/{log}/check-upload', [VerificationController::class, 'verifyUploaded'])->name('verification.check-upload');
         Route::get('/{log}', [VerificationController::class, 'show'])->name('verification.show');
     });
 
@@ -55,6 +56,8 @@ Route::middleware(['auth', 'verified', \App\Http\Middleware\AuthorizeCustodyAcce
 
         Route::get('/provider', [ProviderConnectionController::class, 'index'])->name('settings.provider');
         Route::post('/provider', [ProviderConnectionController::class, 'store'])->name('settings.provider.store');
+        Route::post('/provider/baseus/discover', [ProviderConnectionController::class, 'discoverBaseus'])->name('settings.provider.baseus.discover');
+        Route::post('/provider/baseus/connect', [ProviderConnectionController::class, 'connectDiscoveredBaseus'])->name('settings.provider.baseus.connect');
         Route::post('/provider/{connection}/test', [ProviderConnectionController::class, 'test'])->name('settings.provider.test');
         Route::post('/provider/{connection}/activate', [ProviderConnectionController::class, 'activate'])->name('settings.provider.activate');
         Route::post('/provider/{connection}/deactivate', [ProviderConnectionController::class, 'deactivate'])->name('settings.provider.deactivate');

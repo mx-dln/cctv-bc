@@ -4,6 +4,7 @@ namespace App\Services\Cctv;
 
 use App\Contracts\CctvProviderInterface;
 use App\Models\ProviderConnection;
+use App\Providers\Cctv\BaseusProvider;
 use App\Providers\Cctv\DahuaProvider;
 use App\Providers\Cctv\MockProvider;
 use Illuminate\Support\Facades\Log;
@@ -40,6 +41,7 @@ class CctvProviderFactory
     {
         return match ($type) {
             'mock' => app(MockProvider::class),
+            'baseus' => app(BaseusProvider::class),
             'dahua' => app(DahuaProvider::class),
             default => throw new \RuntimeException("Unsupported CCTV provider: {$type}"),
         };
@@ -60,6 +62,7 @@ class CctvProviderFactory
     {
         return [
             'mock' => 'Mock Provider (Development)',
+            'baseus' => 'Baseus Wi-Fi Camera (LAN Discovery)',
             'dahua' => 'Dahua DVR/NVR (Production)',
         ];
     }

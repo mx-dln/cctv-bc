@@ -11,6 +11,23 @@ const statusStyles: Record<string, string> = {
     failed: 'border-red-500 text-red-400 bg-red-500/10',
 };
 
+function txOperation(tx: BlockchainTransaction) {
+    if (tx.response?.operation === 'verification') {
+        return tx.response.mode === 'uploaded_comparison' ? 'Uploaded Comparison' : 'Evidence Verification';
+    }
+
+    return 'Evidence Registration';
+}
+
+function verificationLabel(tx: BlockchainTransaction) {
+    const status = tx.response?.verification_status;
+
+    if (status === 'verified') return 'Verified';
+    if (status === 'mismatch') return 'Mismatch';
+
+    return null;
+}
+
 export default function BlockchainIndex({ transactions, isAvailable, isSimulated }: {
     transactions: { data: BlockchainTransaction[] };
     isAvailable: boolean;
@@ -93,6 +110,7 @@ export default function BlockchainIndex({ transactions, isAvailable, isSimulated
                                 <thead>
                                     <tr className="border-b border-white/10 text-left text-sm text-gray-400">
                                         <th className="pb-3 font-medium">TX ID</th>
+                                        <th className="pb-3 font-medium">Operation</th>
                                         <th className="pb-3 font-medium">Chaincode</th>
                                         <th className="pb-3 font-medium">Block Number</th>
                                         <th className="pb-3 font-medium">Channel</th>
@@ -110,6 +128,16 @@ export default function BlockchainIndex({ transactions, isAvailable, isSimulated
                                             className="border-b border-white/5 text-sm transition-colors hover:bg-white/5"
                                         >
                                             <td className="py-3 font-mono text-xs text-[#AD9334]">{tx.transaction_id}</td>
+                                            <td className="py-3">
+                                                <div className="space-y-1">
+                                                    <p className="text-sm text-white">{txOperation(tx)}</p>
+                                                    {verificationLabel(tx) && (
+                                                        <p className={verificationLabel(tx) === 'Verified' ? 'text-xs text-green-400' : 'text-xs text-red-400'}>
+                                                            {verificationLabel(tx)}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            </td>
                                             <td className="py-3 text-gray-300">{tx.chaincode}</td>
                                             <td className="py-3 font-mono text-xs text-gray-400">{tx.block_number || '-'}</td>
                                             <td className="py-3 text-xs text-gray-400">{tx.channel}</td>
